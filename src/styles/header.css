@@ -1,0 +1,70 @@
+#header {
+  background: var(--color-bg-surface);
+  position: relative;
+}
+
+.header-logo {
+  font-size: 13px;
+  letter-spacing: 0.35em;
+  color: var(--color-text-bright);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.header-logo span {
+  color: var(--color-text-dim);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+}
+
+.header-sep {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+  margin: 0 16px;
+}
+
+.header-user {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  color: var(--color-text-dim);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header-user .username {
+  color: var(--color-text);
+}
+
+.header-user .group-badge {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  padding: 1px 6px;
+  opacity: 0.8;
+}
+
+.header-clock {
+  font-size: 11px;
+  color: var(--color-text-dim);
+  letter-spacing: 0.1em;
+  opacity: 0.6;
+  min-width: 64px;
+  text-align: right;
+}
+
+/* View transition overlay */
+.view-transition {
+  position: absolute;
+  inset: 0;
+  background: var(--color-bg);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 200;
+  transition: opacity 0.18s ease;
+}
+.view-transition.active {
+  opacity: 1;
+}
