@@ -15,6 +15,7 @@ import { commandRegistry }   from './core/commandRegistry.js';
 import { session }           from './core/session.js';
 import { router }            from './core/router.js';
 import { outputRenderer }    from './core/outputRenderer.js';
+import { soundManager }      from './core/soundManager.js';
 
 // ── Commands ──────────────────────────────────────────────────────────────────
 import { registerCommands }  from './commands/index.js';
@@ -47,7 +48,10 @@ async function init() {
     document.documentElement.classList.add('crt-off');
   }
 
-  // 3. Restore session
+  // 3. Init sound (prépare l'AudioContext dès la première interaction)
+  soundManager.init();
+
+  // 4. Restore session
   session.restore();
 
   // 4. Mount persistent UI elements

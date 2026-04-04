@@ -1,6 +1,7 @@
 import { terminal } from '../core/terminal.js';
 import { focusManager } from '../core/focusManager.js';
 import { outputRenderer } from '../core/outputRenderer.js';
+import { soundManager } from '../core/soundManager.js';
 
 export function mountTerminalBar(el) {
   el.innerHTML = `
@@ -40,6 +41,13 @@ export function mountTerminalBar(el) {
   });
 
   inputEl.addEventListener('focus', claimFocus);
+
+  // Son à chaque frappe de caractère (pas sur les touches de contrôle)
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      soundManager.playKeypress();
+    }
+  });
 
   // Listen for print events (from DocumentList)
   document.addEventListener('bcc:print-lines', (e) => {

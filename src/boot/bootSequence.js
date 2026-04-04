@@ -2,6 +2,7 @@ import { storage } from '../utils/storage.js';
 import { delay } from '../utils/typewriter.js';
 import { BCC_ASCII, BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } from './bootFrames.js';
 import { session } from '../core/session.js';
+import { soundManager } from '../core/soundManager.js';
 
 export async function runBootSequence(contentEl) {
   const restoredUser = session.currentUser();
@@ -131,6 +132,7 @@ async function typeText(el, text, charDelay, isSkipped) {
       return;
     }
     el.textContent += text[i];
+    if (text[i] !== ' ') soundManager.playTypewriterChar();
     if (charDelay > 0) await delay(charDelay);
   }
 }

@@ -90,3 +90,13 @@
   letter-spacing: 0.2em;
   opacity: 0.6;
 }
+
+.settings-section-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--color-text-dim);
+  margin-bottom: 6px;
+  align-self: flex-start;
+  max-width: 480px;
+  width: 100%;
+}

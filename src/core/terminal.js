@@ -4,6 +4,7 @@ import { session } from './session.js';
 import { vfs } from './vfs.js';
 import { focusManager } from './focusManager.js';
 import { router } from './router.js';
+import { soundManager } from './soundManager.js';
 
 const HISTORY_MAX = 100;
 
@@ -33,6 +34,7 @@ export const terminal = {
         historyIndex = -1;
         if (!input) return;
 
+        soundManager.playConfirm();
         addToHistory(input);
 
         // Echo the input
