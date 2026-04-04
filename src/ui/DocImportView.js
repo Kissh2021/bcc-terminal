@@ -1,7 +1,7 @@
-import { focusManager }            from '../core/focusManager.js';
-import { router }                  from '../core/router.js';
-import { soundManager }            from '../core/soundManager.js';
-import { session }                 from '../core/session.js';
+import { focusManager }             from '../core/focusManager.js';
+import { router }                   from '../core/router.js';
+import { soundManager }             from '../core/soundManager.js';
+import { session }                  from '../core/session.js';
 import { getEditDoc, clearEditDoc } from '../utils/docImportState.js';
 import {
   fetchIndex,
@@ -56,7 +56,7 @@ export function mountDocImportView(container) {
     return;
   }
 
-  // ── Token setup (si pas encore configuré) ─────────────────────────────────
+  // ── Token setup ───────────────────────────────────────────────────────────
 
   function renderTokenSetup() {
     view.innerHTML = `
@@ -82,7 +82,6 @@ export function mountDocImportView(container) {
     view.querySelector('#di-token-submit').addEventListener('click', async () => {
       const token = view.querySelector('#di-token-input').value.trim();
       if (!token) return;
-      // Vérification rapide du token
       const fb = view.querySelector('#di-feedback');
       fb.textContent = 'Vérification…';
       fb.className = 'di-feedback';
@@ -131,14 +130,13 @@ export function mountDocImportView(container) {
             value="${editingDoc?.filename ?? ''}"
             spellcheck="false"
             autocomplete="off"
-            ${editingDoc ? 'readonly' : ''}
           />
         </div>
 
         <div class="di-row">
           <div class="di-field">
             <label class="di-label">Dossier cible</label>
-            <select class="di-select" id="di-folder" ${editingDoc ? 'disabled' : ''}>
+            <select class="di-select" id="di-folder">
               ${FOLDERS.map(f => `
                 <option value="${f.value}" ${editingDoc?.folder === f.value ? 'selected' : ''}>${f.label}</option>
               `).join('')}
@@ -156,7 +154,7 @@ export function mountDocImportView(container) {
 
         <div class="di-field">
           <label class="di-label">Format</label>
-          <select class="di-select" id="di-format" ${editingDoc ? 'disabled' : ''}>
+          <select class="di-select" id="di-format">
             <option value="md"  ${editingDoc?.isMarkdown !== false ? 'selected' : ''}>Markdown</option>
             <option value="txt" ${editingDoc?.isMarkdown === false  ? 'selected' : ''}>Texte brut</option>
           </select>
@@ -207,21 +205,34 @@ export function mountDocImportView(container) {
       <div class="di-hint">ÉCHAP — RETOUR &nbsp;·&nbsp; Le document est disponible immédiatement dans les archives.</div>
     `;
 
-    // Soumission
+    // ── Soumission ───────────────────────────────────────────────────────────
+
     view.querySelector('#di-submit').addEventListener('click', async () => {
-      const filename  = view.querySelector('#di-filename').value;
-      const folder    = view.querySelector('#di-folder').value;
-      const accessKey = view.querySelector('#di-access').value;
-      const format    = view.querySelector('#di-format').value;
-      const content   = view.querySelector('#di-content').value;
+      const rawName    = view.querySelector('#di-filename').value.trim();
+      const folder     = view.querySelector('#di-folder').value;
+      const accessKey  = view.querySelector('#di-access').value;
+      const format     = view.querySelector('#di-format').value;
+      const content    = view.querySelector('#di-content').value;
       const isMarkdown = format === 'md';
 
-      // Auto-extension
-      const ext = isMarkdown ? '.md' : '.txt';
-      const finalName = filename.trim().includes('.') ? filename.trim() : filename.trim() + ext;
+      if (!rawName) { setFeedback('error', 'Nom de fichier requis.'); return; }
 
-      setFeedback('', '');
+      // Auto-extension si absente
+      const ext       = isMarkdown ? '.md' : '.txt';
+      const finalName = rawName.includes('.') ? rawName : rawName + ext;
+
       setFeedback('', 'Envoi en cours…');
+
+      // Si on édite et que le nom ou le dossier a changé → supprimer l'ancien
+      const isRename = editingDoc && (finalName !== editingDoc.filename || folder !== editingDoc.folder);
+      if (isRename) {
+        const delResult = await deleteGithubDoc(editingDoc, adminToken);
+        if (!delResult.ok) {
+          setFeedback('error', `Suppression ancienne version : ${delResult.error}`);
+          return;
+        }
+        ejectSingleGithubDoc(editingDoc);
+      }
 
       const result = await createGithubDoc(
         { filename: finalName, folder, accessKey, isMarkdown, content },
@@ -235,32 +246,34 @@ export function mountDocImportView(container) {
       }
 
       soundManager.playConfirm?.();
-      // Met à jour le VFS runtime
       ejectSingleGithubDoc(result.doc);
       injectSingleGithubDoc(result.doc);
+      const wasEditing = editingDoc;
       editingDoc  = null;
       editContent = '';
-      renderMain({ type: 'ok', message: `"${finalName}" ${editingDoc ? 'mis à jour' : 'ajouté'} dans /${folder}.` });
+      renderMain({ type: 'ok', message: `"${finalName}" ${wasEditing ? 'mis à jour' : 'ajouté'} dans /${folder}.` });
     });
 
-    // Annuler édition
+    // ── Annuler édition ──────────────────────────────────────────────────────
+
     view.querySelector('#di-cancel')?.addEventListener('click', () => {
       editingDoc  = null;
       editContent = '';
       renderMain();
     });
 
-    // Déconnecter token
+    // ── Déconnecter token ────────────────────────────────────────────────────
+
     view.querySelector('#di-token-clear').addEventListener('click', () => {
       clearAdminToken();
       renderTokenSetup();
     });
 
-    // Édition
+    // ── Édition depuis la liste ──────────────────────────────────────────────
+
     view.querySelectorAll('.di-doc-edit').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const id  = btn.dataset.id;
-        const doc = index.find(d => d.id === id);
+        const doc = index.find(d => d.id === btn.dataset.id);
         if (!doc) return;
         editingDoc  = doc;
         editContent = '';
@@ -268,11 +281,11 @@ export function mountDocImportView(container) {
       });
     });
 
-    // Suppression
+    // ── Suppression depuis la liste ──────────────────────────────────────────
+
     view.querySelectorAll('.di-doc-del').forEach(btn => {
       btn.addEventListener('click', async () => {
-        const id  = btn.dataset.id;
-        const doc = index.find(d => d.id === id);
+        const doc = index.find(d => d.id === btn.dataset.id);
         if (!doc) return;
         soundManager.playBack?.();
         setFeedback('', 'Suppression…');

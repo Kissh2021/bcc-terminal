@@ -120,7 +120,7 @@ export async function createGithubDoc({ filename, folder, accessKey, isMarkdown,
   const name       = filename.trim();
   const githubPath = `${folder}/${name}`;
 
-  // Vérifier collision dans le VFS (docs natifs)
+  // Vérifier collision avec un doc système (non-GitHub)
   const dir = filesystem.children?.[folder];
   if (dir?.children?.[name] && !dir.children[name]._githubDoc) {
     return { ok: false, error: `"${name}" est un document système et ne peut pas être remplacé.` };
