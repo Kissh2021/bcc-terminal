@@ -1,7 +1,8 @@
-import { focusManager } from '../core/focusManager.js';
-import { router }        from '../core/router.js';
-import { soundManager }  from '../core/soundManager.js';
-import { session }       from '../core/session.js';
+import { focusManager }            from '../core/focusManager.js';
+import { router }                  from '../core/router.js';
+import { soundManager }            from '../core/soundManager.js';
+import { session }                 from '../core/session.js';
+import { getEditDoc, clearEditDoc } from '../utils/docImportState.js';
 import {
   fetchIndex,
   fetchDocContent,
@@ -36,9 +37,10 @@ export function mountDocImportView(container) {
   view.className = 'doc-import-view';
   container.appendChild(view);
 
-  // État édition
-  let editingDoc  = null; // doc GitHub en cours d'édition
+  // État édition — peut être pré-rempli depuis DocumentList
+  let editingDoc  = getEditDoc() ?? null;
   let editContent = '';
+  clearEditDoc();
 
   // ── Accès refusé ─────────────────────────────────────────────────────────
 

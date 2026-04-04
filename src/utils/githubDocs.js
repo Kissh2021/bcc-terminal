@@ -85,11 +85,17 @@ async function getFileMeta(path, token) {
 
 // ── Index ──────────────────────────────────────────────────────────────────
 
+let cachedIndex = [];
+
+export function getCachedIndex() { return cachedIndex; }
+
 export async function fetchIndex() {
   try {
     const data = await apiRequest('GET', '_index.json', null, READONLY_TOKEN);
-    return JSON.parse(b64Decode(data.content));
+    cachedIndex = JSON.parse(b64Decode(data.content));
+    return cachedIndex;
   } catch {
+    cachedIndex = [];
     return [];
   }
 }
