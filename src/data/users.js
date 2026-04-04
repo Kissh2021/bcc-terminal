@@ -23,7 +23,7 @@ export const users = [
   },
   {
     id: 'usr-002',
-    username: 'agent_alpha',
+    username: 'boss',
     // mot de passe: bcc2024
     passwordHash: 'b872b7016c6d170acc466204d0ab7e9bfa0256f1e32181d409bc7668d122cbe8',
     group: 'agent',
