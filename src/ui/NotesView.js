@@ -444,12 +444,16 @@ export function mountNotesView(container) {
           clearSelection();
           return true;
         }
-        if (document.activeElement?.tagName !== 'TEXTAREA') {
+        // First Escape blurs the focused note; second Escape navigates back
+        if (document.activeElement?.tagName === 'TEXTAREA') {
           e.preventDefault();
-          soundManager.playBack();
-          router.pop();
+          document.activeElement.blur();
           return true;
         }
+        e.preventDefault();
+        soundManager.playBack();
+        router.pop();
+        return true;
       }
       // Suppr / Delete supprime la sélection (AZERTY: "Suppr" → e.key === 'Delete')
       if (selectedIds.size > 0 && document.activeElement?.tagName !== 'TEXTAREA') {

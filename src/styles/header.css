@@ -3,6 +3,39 @@
   position: relative;
 }
 
+/* ── Header nav buttons (Accueil / close context) ── */
+.header-nav-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+  font-family: inherit;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  padding: 3px 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.header-nav-btn:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-dim);
+}
+
+.header-nav-btn--close {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+  opacity: 0.75;
+}
+
+.header-nav-btn--close:hover {
+  opacity: 1;
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
 .header-logo {
   font-size: 13px;
   letter-spacing: 0.35em;
