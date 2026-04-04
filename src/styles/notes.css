@@ -126,9 +126,106 @@
   overflow: hidden;
 }
 
+.notes-canvas.panning {
+  cursor: grabbing;
+}
+
+/* World layer: receives the pan transform; pointer-events:none so
+   background clicks pass through to canvas (rubber-band / pan), while
+   notes inside (auto by default) still receive their own events. */
+.canvas-world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+/* ── Page tabs ───────────────────────────────────────────────────────────── */
+
+.notes-pages-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 45%;
+}
+.notes-pages-bar::-webkit-scrollbar { display: none; }
+
+.notes-page-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  padding: 3px 8px;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  flex-shrink: 0;
+}
+.notes-page-tab:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-dim);
+}
+.notes-page-tab.active {
+  color: var(--color-text);
+  border-color: var(--color-text-dim);
+  background: color-mix(in srgb, var(--color-text) 6%, transparent);
+}
+
+.notes-page-del {
+  font-size: 9px;
+  opacity: 0.35;
+  cursor: pointer;
+  line-height: 1;
+  transition: opacity 0.15s, color 0.15s;
+}
+.notes-page-del:hover {
+  opacity: 1;
+  color: var(--color-error, #c0392b);
+}
+
+.notes-page-add {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1;
+  width: 22px;
+  height: 22px;
+  border: 1px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-dim);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+}
+.notes-page-add:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-dim);
+}
+
+.notes-toolbar-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--color-border);
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
 /* ── Post-it ─────────────────────────────────────────────────────────────── */
 
 .note {
+  pointer-events: auto; /* restore events — parent .canvas-world is pointer-events:none */
   position: absolute;
   min-width: 180px;
   min-height: 120px;

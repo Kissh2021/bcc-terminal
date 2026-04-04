@@ -17,17 +17,10 @@ export function mountHeader(el) {
 
 function buildNavButtons(view) {
   if (!view || view === 'main-menu') return '';
-
-  const homeBtn = `<button class="header-nav-btn" id="header-btn-home">← ACCUEIL</button>`;
-
-  if (view === 'terminal-output') {
-    return homeBtn + `<button class="header-nav-btn header-nav-btn--close" id="header-btn-close">✕ TERMINAL</button>`;
-  }
-  if (view === 'notes') {
-    return homeBtn + `<button class="header-nav-btn header-nav-btn--close" id="header-btn-close">✕ NOTES</button>`;
-  }
-
-  return homeBtn;
+  return `
+    <button class="header-nav-btn" id="header-btn-home">← ACCUEIL</button>
+    <button class="header-nav-btn" id="header-btn-back">↩ RETOUR</button>
+  `;
 }
 
 function render(el) {
@@ -53,7 +46,7 @@ function render(el) {
     router.replace('main-menu');
   });
 
-  el.querySelector('#header-btn-close')?.addEventListener('click', () => {
+  el.querySelector('#header-btn-back')?.addEventListener('click', () => {
     soundManager.playBack();
     router.pop();
   });

@@ -11,7 +11,7 @@
 - One task per subagent for focused execution
 
 ### 3. Self-Improvement Loop
-- After ANY correction from the user: update `tasks/lessons. md` with the pattern
+- After ANY correction from the user: update `tasks/lessons.md` with the pattern
 - Write rules for yourself that prevent the same mistake
 - Ruthlessly iterate on these lessons until mistake rate drops
 - Review lessons at session start for relevant project
@@ -34,14 +34,19 @@
 - Zero context switching required from the user
 - Go fix failing CI tests without being told how
 
+### 7. CLAUDE.md — Mise à jour systématique
+- **Après chaque session de travail : mettre à jour CLAUDE.md.**
+- Toute nouvelle convention, pattern architectural, règle UI ou leçon apprise doit être documentée ici.
+- Ne jamais terminer une session sans vérifier si CLAUDE.md est à jour.
+
 ## Task Management
 
-1. **Plan First**: Write plan to `tasks/todo.md` with checkable items  
-2. **Verify Plan**: Check in before starting implementation  
-3. **Track Progress**: Mark items complete as you go  
-4. **Explain Changes**: High-level summary at each step  
-5. **Document Results**: Add review section to `tasks/todo. md`  
-6. **Capture Lessons**: Update `tasks/lessons. md` after corrections  
+1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
+2. **Verify Plan**: Check in before starting implementation
+3. **Track Progress**: Mark items complete as you go
+4. **Explain Changes**: High-level summary at each step
+5. **Document Results**: Add review section to `tasks/todo.md`
+6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
 
 ## Core Principles
 
@@ -56,10 +61,43 @@ Toute commande qui doit attendre une saisie utilisateur (ex : login, accounts) d
 Cette fonction utilise la phase capture + `stopImmediatePropagation` pour intercepter l'Entrée
 avant le handler du terminal, évitant ainsi le double-dispatch ("commande inconnue").
 
+### FocusManager — règles critiques
+- `focusManager.claim(component)` empile le propriétaire précédent → `release()` le restaure.
+- **Ne jamais appeler `inputEl.focus()` de manière programmatique si un overlay est ouvert.**
+  Dans `terminal.js`, le refocus post-commande est conditionné à l'absence de `#doc-viewer-overlay`.
+- `claimFocus()` dans `TerminalBar` est déclenché uniquement sur interaction utilisateur
+  (raccourci `:` / Tab), jamais sur focus programmatique, pour éviter d'écraser un overlay actif.
+
+### Router — navigation
+- `router.push(view)` empile la vue courante → `router.pop()` y revient.
+- `router.replace(view)` remplace sans empiler (utilisé pour l'accueil, pas de retour arrière).
+- Le router émet `bcc:route-changed` après chaque navigation → le Header écoute pour mettre à jour ses boutons contextuels.
+
+### Header — boutons de navigation contextuels
+- **← ACCUEIL** : `router.replace('main-menu')` — visible sur toutes les vues sauf main-menu.
+- **↩ RETOUR** : `router.pop()` — visible sur toutes les vues sauf main-menu.
+- Le Header se re-rend sur `bcc:session-changed` ET `bcc:route-changed`.
+
+### Notes — canvas infini (NotesView)
+- **Modèle de données** : `notes-data` → `{ activePageId, pages: [{ id, name, notes, panX, panY }] }`
+  - Migration automatique depuis l'ancien format `notes` (tableau plat) → PAGE 1.
+- **Canvas world** : un élément `.canvas-world` (`pointer-events: none`) est enfant de `.notes-canvas`.
+  Les notes ont `pointer-events: auto` (restauré explicitement). Cela permet :
+  - clics fond vide → passent au canvas (rubber-band / panning)
+  - clics notes → reçus par les notes
+- **Panning** : clic droit + drag sur `.notes-canvas` → `translate(panX, panY)` sur `.canvas-world`.
+  Position sauvegardée par page au mouseup.
+- **Rubber-band** : coordonnées converties en world-space en soustrayant le pan
+  (`e.clientX - canvasRect.left - page.panX`).
+- **Drag des notes** : formule `noteData.x = e.clientX - startX` — intègre naturellement le pan
+  car `startX` capture l'offset viewport au départ du drag.
+- **Pages** : onglets dans la toolbar, add/delete, chaque page a son pan indépendant.
+
 ### Ajouter une commande
 1. Créer `src/commands/<nom>.js` avec `{ name, description, usage, secret, handler }`
 2. L'importer et l'enregistrer dans `src/commands/index.js`
 3. Mettre à jour `README.md` (tableau des commandes)
+4. Mettre à jour `CLAUDE.md` si la commande introduit un nouveau pattern
 
 ## Git Rules — IMPÉRATIF
 
