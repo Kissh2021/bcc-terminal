@@ -239,6 +239,7 @@ export function mountNotesView(container) {
       <div class="notes-toolbar-sep"></div>
       <span class="notes-toolbar-label">NOTES</span>
       <button class="notes-btn primary" id="notes-new">+ NOUVELLE</button>
+      <button class="notes-btn" id="notes-reset-view" title="Réinitialiser la position de la vue">⌖ VUE</button>
       <button class="notes-btn" id="notes-export">EXPORTER TOUT</button>
       <button class="notes-btn" id="notes-import">IMPORTER</button>
       <span class="notes-sel-bar" id="notes-sel-bar">
@@ -251,6 +252,7 @@ export function mountNotesView(container) {
     </div>
     <div class="notes-canvas" id="notes-canvas">
       <div class="canvas-world" id="canvas-world"></div>
+      <div class="canvas-center-marker"></div>
     </div>
   `;
   container.appendChild(view);
@@ -330,10 +332,6 @@ export function mountNotesView(container) {
     selectedIds     = new Set();
     updateSelectionVisuals();
     applyPan();
-    // Origin marker — visual reference for the canvas center (0, 0)
-    const originEl = document.createElement('div');
-    originEl.className = 'canvas-origin';
-    world.appendChild(originEl);
     activePage().notes.forEach(addNote);
     updateCount();
     renderPageTabs();
@@ -415,8 +413,8 @@ export function mountNotesView(container) {
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (e.button !== 2) return;
-    e.preventDefault();
+    if (e.button !== 1 && e.button !== 2) return;
+    e.preventDefault(); // blocks middle-click auto-scroll and right-click browser gestures
     canvas.setPointerCapture(e.pointerId); // claim the pointer before browser gestures fire
 
     const page   = activePage();
@@ -507,6 +505,15 @@ export function mountNotesView(container) {
     setTimeout(() => {
       world.querySelector(`[data-id="${note.id}"] .note-textarea`)?.focus();
     }, 50);
+  });
+
+  view.querySelector('#notes-reset-view').addEventListener('click', () => {
+    soundManager.playBack();
+    const page = activePage();
+    page.panX = 0;
+    page.panY = 0;
+    applyPan();
+    persist();
   });
 
   view.querySelector('#notes-export').addEventListener('click', () => {

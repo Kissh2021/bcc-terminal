@@ -222,39 +222,41 @@
   margin: 0 2px;
 }
 
-/* ── Canvas origin marker (0, 0 reference) ───────────────────────────────── */
+/* ── Center-of-viewport marker ───────────────────────────────────────────── */
+/* Fixed crosshair always at the center of the visible canvas area.
+   Not in .canvas-world, so it is unaffected by panning. */
 
-.canvas-origin {
+.canvas-center-marker {
   position: absolute;
-  left: 0;
-  top: 0;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   width: 0;
   height: 0;
   pointer-events: none;
+  z-index: 5; /* above canvas background, below notes (z-index: 10) */
 }
 
-/* Horizontal arm */
-.canvas-origin::before {
+.canvas-center-marker::before {
   content: '';
   position: absolute;
-  width: 20px;
+  width: 24px;
   height: 1px;
-  left: -10px;
+  left: -12px;
   top: 0;
   background: var(--color-accent);
-  opacity: 0.35;
+  opacity: 0.3;
 }
 
-/* Vertical arm */
-.canvas-origin::after {
+.canvas-center-marker::after {
   content: '';
   position: absolute;
   width: 1px;
-  height: 20px;
+  height: 24px;
   left: 0;
-  top: -10px;
+  top: -12px;
   background: var(--color-accent);
-  opacity: 0.35;
+  opacity: 0.3;
 }
 
 /* ── Post-it ─────────────────────────────────────────────────────────────── */
