@@ -231,13 +231,13 @@
 
 .canvas-center-marker {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
+  left: 0;          /* world origin x */
+  top: 0;           /* world origin y */
+  transform: translate(-50%, -50%);  /* center the crosshair on (0,0) */
   width: 0;
   height: 0;
   pointer-events: none;
-  /* No z-index needed: sits before .canvas-world in DOM, so always behind notes */
+  /* First child of world → always behind notes in DOM order */
 }
 
 .canvas-center-marker::before {

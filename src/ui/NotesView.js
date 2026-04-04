@@ -88,29 +88,38 @@ function importNotes(onSuccess, onError) {
 let topZ = 10;
 function bringToFront(el) { el.style.zIndex = ++topZ; }
 
-// ── Drag (unclamped — infinite canvas) ────────────────────────────────────────
+// ── Drag (unclamped — infinite canvas, supports multi-selection drag) ─────────
+// getSelection(noteId) → [{noteData, noteEl}] for all notes to move together.
 
-function makeDraggable(noteEl, noteData, onUpdate) {
+function makeDraggable(noteEl, noteData, onUpdate, getSelection) {
   const header = noteEl.querySelector('.note-header');
 
   header.addEventListener('mousedown', (e) => {
     if (e.target.classList.contains('note-delete')) return;
     e.preventDefault();
-    noteEl.classList.add('dragging');
     bringToFront(noteEl);
 
-    // startX/Y encode the offset so that delta = new world position
-    const startX = e.clientX - noteData.x;
-    const startY = e.clientY - noteData.y;
+    // Resolve which notes move (multi or single)
+    const group = getSelection(noteData.id);
+    group.forEach(({ noteEl: el }) => el?.classList.add('dragging'));
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initPos = group.map(({ noteData: nd }) => ({ nd, ix: nd.x, iy: nd.y }));
 
     function onMove(e) {
-      noteData.x = e.clientX - startX;
-      noteData.y = e.clientY - startY;
-      noteEl.style.left = noteData.x + 'px';
-      noteEl.style.top  = noteData.y + 'px';
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      initPos.forEach(({ nd, ix, iy, noteEl: el }) => {
+        nd.x = ix + dx;
+        nd.y = iy + dy;
+      });
+      group.forEach(({ noteData: nd, noteEl: el }) => {
+        if (el) { el.style.left = nd.x + 'px'; el.style.top = nd.y + 'px'; }
+      });
     }
     function onUp() {
-      noteEl.classList.remove('dragging');
+      group.forEach(({ noteEl: el }) => el?.classList.remove('dragging'));
       document.removeEventListener('mousemove', onMove);
       document.removeEventListener('mouseup', onUp);
       onUpdate();
@@ -122,16 +131,21 @@ function makeDraggable(noteEl, noteData, onUpdate) {
   // Touch support
   header.addEventListener('touchstart', (e) => {
     if (e.target.classList.contains('note-delete')) return;
-    const t      = e.touches[0];
-    const startX = t.clientX - noteData.x;
-    const startY = t.clientY - noteData.y;
+    const t = e.touches[0];
+
+    const group = getSelection(noteData.id);
+    const startX = t.clientX;
+    const startY = t.clientY;
+    const initPos = group.map(({ noteData: nd }) => ({ nd, ix: nd.x, iy: nd.y }));
 
     function onMove(e) {
-      const t    = e.touches[0];
-      noteData.x = t.clientX - startX;
-      noteData.y = t.clientY - startY;
-      noteEl.style.left = noteData.x + 'px';
-      noteEl.style.top  = noteData.y + 'px';
+      const t  = e.touches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      initPos.forEach(({ nd, ix, iy }) => { nd.x = ix + dx; nd.y = iy + dy; });
+      group.forEach(({ noteData: nd, noteEl: el }) => {
+        if (el) { el.style.left = nd.x + 'px'; el.style.top = nd.y + 'px'; }
+      });
     }
     function onEnd() {
       header.removeEventListener('touchmove', onMove);
@@ -170,7 +184,7 @@ function rectsOverlap(sel, note) {
 
 // ── Note element ───────────────────────────────────────────────────────────────
 
-function createNoteEl(noteData, onUpdate, onDelete) {
+function createNoteEl(noteData, onUpdate, onDelete, getSelection) {
   const el = document.createElement('div');
   el.className    = 'note';
   el.style.left   = noteData.x + 'px';
@@ -207,7 +221,7 @@ function createNoteEl(noteData, onUpdate, onDelete) {
     setTimeout(() => { el.remove(); onDelete(noteData.id); }, 150);
   });
 
-  makeDraggable(el, noteData, onUpdate);
+  makeDraggable(el, noteData, onUpdate, getSelection);
   watchResize(el, noteData, onUpdate);
   return el;
 }
@@ -251,7 +265,6 @@ export function mountNotesView(container) {
       <span class="notes-count" id="notes-count"></span>
     </div>
     <div class="notes-canvas" id="notes-canvas">
-      <div class="canvas-center-marker"></div>
       <div class="canvas-world" id="canvas-world"></div>
     </div>
   `;
@@ -313,6 +326,18 @@ export function mountNotesView(container) {
 
   // ── Canvas rendering ───────────────────────────────────────────────────────────
 
+  // Returns all notes that should move together when dragging noteId.
+  // If noteId is in the current selection → return all selected notes.
+  // Otherwise → return just the one note (single drag).
+  function getSelection(noteId) {
+    const page = activePage();
+    const ids  = selectedIds.has(noteId) ? [...selectedIds] : [noteId];
+    return ids.map(id => ({
+      noteData: page.notes.find(n => n.id === id),
+      noteEl:   world.querySelector(`[data-id="${id}"]`),
+    })).filter(({ noteData, noteEl }) => noteData && noteEl);
+  }
+
   function addNote(noteData) {
     const page = activePage();
     const el = createNoteEl(
@@ -323,7 +348,8 @@ export function mountNotesView(container) {
         selectedIds.delete(id);
         updateSelectionVisuals();
         persist();
-      }
+      },
+      getSelection
     );
     world.appendChild(el);
     bringToFront(el);
@@ -334,6 +360,10 @@ export function mountNotesView(container) {
     selectedIds     = new Set();
     updateSelectionVisuals();
     applyPan();
+    // Origin marker at world (0,0) — moves with the canvas when panning
+    const originMarker = document.createElement('div');
+    originMarker.className = 'canvas-center-marker';
+    world.appendChild(originMarker);
     activePage().notes.forEach(addNote);
     updateCount();
     renderPageTabs();
@@ -441,6 +471,12 @@ export function mountNotesView(container) {
     canvas.addEventListener('pointerup', onUp);
   });
 
+  // ── Deselect on click on canvas background ────────────────────────────────────
+
+  canvas.addEventListener('pointerdown', (e) => {
+    if (e.button === 0 && e.target === canvas) clearSelection();
+  });
+
   // ── Rubber-band selection (left click on canvas background) ────────────────────
 
   canvas.addEventListener('mousedown', (e) => {
@@ -513,8 +549,9 @@ export function mountNotesView(container) {
   view.querySelector('#notes-reset-view').addEventListener('click', () => {
     soundManager.playBack();
     const page = activePage();
-    page.panX = 0;
-    page.panY = 0;
+    // Center the view on world origin (0,0): pan = half canvas dimensions
+    page.panX = canvas.offsetWidth  / 2;
+    page.panY = canvas.offsetHeight / 2;
     applyPan();
     persist();
   });
