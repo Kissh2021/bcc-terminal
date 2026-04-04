@@ -35,4 +35,11 @@ export const users = [
     passwordHash: '359d6d57e0a84624a1ff4dae25b68bbc207c58ac0a98c1e648c7e6c97c333a42',
     group: 'public',
   },
+    {
+    id: 'usr-003',
+    username: 'mayleen',
+    // mot de passe: quantumgate
+    passwordHash: '1acebfe281a928fb3c95791809e744ecd90531f2e46aa91c63445497ad125696',
+    group: 'agent',
+  },
 ];
