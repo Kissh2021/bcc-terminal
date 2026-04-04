@@ -29,7 +29,7 @@ export const focusManager = {
    */
   dispatch(e) {
     // Global shortcuts
-    if ((e.key === '/' || e.key === '`') && !isInputFocused()) {
+    if ((e.key === ':' || e.key === '`') && !isInputFocused()) {
       e.preventDefault();
       // Signal terminal bar to claim focus
       document.dispatchEvent(new CustomEvent('bcc:focus-terminal'));
