@@ -165,6 +165,21 @@ export const soundManager = {
     setTimeout(() => playTone({ frequency: 440, duration: 0.08, volume: 0.07, type: 'square' }), 50);
   },
 
+  // ── Chargement distant ────────────────────────────────────────────────────
+  /** Tick de scan — appelé en boucle pendant un fetch GitHub */
+  playLoadTick() {
+    if (!canPlay('nav')) return;
+    const freq = 280 + Math.random() * 120;
+    playTone({ frequency: freq, duration: 0.018, volume: 0.07, type: 'square', decay: 0.025 });
+  },
+
+  /** Chargement terminé — petit accord montant */
+  playLoadDone() {
+    playTone({ frequency: 660,  duration: 0.04, volume: 0.10, type: 'square' });
+    setTimeout(() => playTone({ frequency: 880,  duration: 0.04, volume: 0.09, type: 'square' }), 40);
+    setTimeout(() => playTone({ frequency: 1100, duration: 0.06, volume: 0.08, type: 'square' }), 80);
+  },
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   isEnabled()  { return storage.get('sound', 'on') !== 'off'; },
   setEnabled(b){ storage.set('sound', b ? 'on' : 'off'); },
