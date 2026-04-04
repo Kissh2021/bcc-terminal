@@ -97,6 +97,7 @@ export function mountSettingsView(container) {
   }
 
   function setPalette(name) {
+    soundManager.playPalette();
     document.documentElement.setAttribute('data-theme', name);
     storage.set('palette', name);
     focusedPalette = PALETTES.findIndex(p => p.name === name);
@@ -104,12 +105,14 @@ export function mountSettingsView(container) {
   }
 
   function toggleCrt() {
+    soundManager.playToggle(!document.documentElement.classList.contains('crt-off'));
     const off = document.documentElement.classList.toggle('crt-off');
     storage.set('crt', off ? 'off' : 'on');
     render();
   }
 
   function toggleSound() {
+    soundManager.playToggle(!soundManager.isEnabled());
     soundManager.setEnabled(!soundManager.isEnabled());
     if (soundManager.isEnabled()) soundManager.playKeypress();
     render();
@@ -121,7 +124,7 @@ export function mountSettingsView(container) {
       // Ne pas interférer si le slider a le focus
       if (document.activeElement?.id === 'volume-slider') return false;
 
-      if (e.key === 'Escape') { e.preventDefault(); router.pop(); return true; }
+      if (e.key === 'Escape') { e.preventDefault(); soundManager.playBack(); router.pop(); return true; }
       if (e.key === 'c' || e.key === 'C') { toggleCrt(); return true; }
       if (e.key === 's' || e.key === 'S') { toggleSound(); return true; }
 

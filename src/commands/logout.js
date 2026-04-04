@@ -1,3 +1,4 @@
+import { soundManager } from '../core/soundManager.js';
 export default {
   name: 'logout',
   description: 'Se déconnecter',
@@ -10,6 +11,7 @@ export default {
     }
     const user = session.currentUser();
     session.logout();
+    soundManager.playLogout();
     outputRenderer.printLine(`Session fermée — Au revoir, ${user.username.toUpperCase()}`, 'dim');
     document.dispatchEvent(new CustomEvent('bcc:session-changed'));
     setTimeout(() => router.replace('main-menu'), 600);

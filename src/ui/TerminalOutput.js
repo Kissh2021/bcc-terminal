@@ -1,6 +1,7 @@
 import { outputRenderer } from '../core/outputRenderer.js';
 import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
+import { soundManager } from '../core/soundManager.js';
 
 export function mountTerminalOutput(container) {
   const el = document.createElement('div');
@@ -14,7 +15,7 @@ export function mountTerminalOutput(container) {
     handleKeydown(e) {
       if (e.key === 'Escape') {
         e.preventDefault();
-        router.pop();
+        soundManager.playBack(); router.pop();
         return true;
       }
       return false;

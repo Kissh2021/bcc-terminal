@@ -1,11 +1,12 @@
 import { session } from '../core/session.js';
 import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
+import { soundManager } from '../core/soundManager.js';
 
 const MENU_ITEMS = [
   { key: '1', id: 'documents', label: 'DOCUMENTS',    desc: 'Archives & rapports' },
-  { key: '2', id: 'profile',   label: 'MON PROFIL',   desc: 'Compte & accès'       },
-  { key: '3', id: 'settings',  label: 'PARAMÈTRES',   desc: 'Thème & affichage'    },
+  { key: '2', id: 'profile',   label: 'MON PROFIL',   desc: 'Compte & acc\u00e8s'       },
+  { key: '3', id: 'settings',  label: 'PARAM\u00c8TRES',   desc: 'Th\u00e8me & affichage'    },
 ];
 
 export function mountMainMenu(container) {
@@ -17,7 +18,7 @@ export function mountMainMenu(container) {
     const user = session.currentUser();
     el.innerHTML = `
       <div class="menu-title">
-        ${user ? `ACCÈS AUTORISÉ — ${user.username.toUpperCase()}` : 'ACCÈS PUBLIC'}
+        ${user ? `ACC\u00c8S AUTORIS\u00c9 \u2014 ${user.username.toUpperCase()}` : 'ACC\u00c8S PUBLIC'}
       </div>
       ${MENU_ITEMS.map((item, i) => `
         <div class="menu-item${i === focusedIdx ? ' focused' : ''}" data-id="${item.id}" data-idx="${i}">
@@ -26,16 +27,16 @@ export function mountMainMenu(container) {
           <span class="menu-item-desc">${item.desc}</span>
         </div>
       `).join('')}
-      <div class="menu-hint">↑↓ NAVIGUER &nbsp;·&nbsp; ENTRÉE SÉLECTIONNER &nbsp;·&nbsp; / TERMINAL</div>
+      <div class="menu-hint">\u2191\u2193 NAVIGUER &nbsp;\u00b7&nbsp; ENTR\u00c9E S\u00c9LECTIONNER &nbsp;\u00b7&nbsp; / TERMINAL</div>
     `;
 
-    // Click handlers
     el.querySelectorAll('.menu-item').forEach(item => {
       item.addEventListener('click', () => navigate(item.dataset.id));
     });
   }
 
   function navigate(id) {
+    soundManager.playNavigate();
     router.push(id);
   }
 
@@ -59,7 +60,6 @@ export function mountMainMenu(container) {
         navigate(MENU_ITEMS[focusedIdx].id);
         return true;
       }
-      // Number shortcuts
       const num = parseInt(e.key);
       if (num >= 1 && num <= MENU_ITEMS.length) {
         navigate(MENU_ITEMS[num - 1].id);
@@ -67,9 +67,7 @@ export function mountMainMenu(container) {
       }
       return false;
     },
-    focus() {
-      el.focus();
-    },
+    focus() { el.focus(); },
   };
 
   render();
