@@ -92,15 +92,20 @@ avant le handler du terminal, évitant ainsi le double-dispatch ("commande incon
   Position sauvegardée par page au `pointerup`.
 - **Nouvelle note** : position calculée en world-coords = `(-panX + marge, -panY + marge)` pour apparaître
   dans le coin haut-gauche visible, peu importe le pan courant.
-- **Repère centre** : div `.canvas-center-marker` dans `.notes-canvas` (PAS dans `.canvas-world`),
-  positionné à `left:50%; top:50%` → toujours au centre du viewport, non affecté par le pan.
-  Doit être AVANT `.canvas-world` dans le DOM (pas de z-index) pour rester derrière les notes.
-  Crosshair CSS (`::before` horizontal, `::after` vertical), opacité 0.3.
+- **Repère origine** : div `.canvas-center-marker` créé dynamiquement dans `renderPage()` comme
+  PREMIER enfant de `.canvas-world` (donc derrière les notes en DOM order, pas de z-index).
+  Positionné à `left:0; top:0; transform:translate(-50%,-50%)` → centré sur le world origin (0,0).
+  Bouge avec le pan. Reset = `panX = canvas.offsetWidth/2, panY = canvas.offsetHeight/2`
+  pour centrer l'origine dans le viewport.
 - **Fond défilant** : grille répétée sur `.notes-canvas` (pas sur `#notes-view`).
   `applyPan()` met à jour `canvas.style.backgroundPosition` en même temps que le transform du world.
   La vignette radiale reste sur `#notes-view` (fixe, non scrollable).
 - **Arrêt pan molette** : le handler `onUp` vérifie `e.button !== startButton` (bouton capturé au départ),
   pas `e.button !== 2` en dur, pour arrêter correctement sur button 1 ou 2.
+- **Déselection** : `pointerdown` sur fond canvas (button 0, e.target === canvas) → `clearSelection()` immédiat.
+- **Multi-drag** : `makeDraggable` accepte un callback `getSelection(noteId)` défini dans `mountNotesView`.
+  Si la note draguée est dans `selectedIds` → toutes les notes sélectionnées bougent ensemble (delta depuis positions initiales).
+  Sinon → drag de la note seule. `createNoteEl` et `addNote` passent le callback.
 - **Reset vue** : bouton `⌖ VUE` dans la toolbar → remet `page.panX = 0, page.panY = 0` + `applyPan()`.
 - **Rubber-band** : coordonnées converties en world-space en soustrayant le pan
   (`e.clientX - canvasRect.left - page.panX`).
