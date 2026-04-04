@@ -1,3 +1,12 @@
+/* CRT intensity defaults (overridden via JS style.setProperty) */
+:root {
+  --vignette-1: 0.35;   /* centre → bord 1 */
+  --vignette-2: 0.80;   /* bord 2 */
+  --vignette-3: 0.94;   /* coin */
+  --scanline-alpha: 0.09;
+  --glow-scale: 1;
+}
+
 /* CRT Overlay — scanlines + vignette */
 #crt-overlay {
   position: absolute;
@@ -10,19 +19,19 @@
       to bottom,
       transparent 0px,
       transparent 2px,
-      rgba(0, 0, 0, 0.09) 2px,
-      rgba(0, 0, 0, 0.09) 3px
+      rgba(0, 0, 0, var(--scanline-alpha)) 2px,
+      rgba(0, 0, 0, var(--scanline-alpha)) 3px
     ),
     radial-gradient(
       ellipse at 50% 50%,
       transparent 45%,
-      rgba(0, 0, 0, 0.45) 72%,
-      rgba(0, 0, 0, 0.90) 90%,
-      rgba(0, 0, 0, 0.97) 100%
+      rgba(0, 0, 0, var(--vignette-1)) 72%,
+      rgba(0, 0, 0, var(--vignette-2)) 90%,
+      rgba(0, 0, 0, var(--vignette-3)) 100%
     );
 }
 
-/* Deep edge shadow on the wrap itself */
+/* Deep edge shadow */
 #screen-wrap {
   box-shadow:
     inset 0 0 80px rgba(0, 0, 0, 0.85),
@@ -30,7 +39,7 @@
     0 8px 40px rgba(0, 0, 0, 0.9);
 }
 
-/* Phosphor glow on all text */
+/* Phosphor glow */
 body {
   text-shadow:
     0 0 3px var(--color-glow-strong),
@@ -38,7 +47,7 @@ body {
     0 0 24px var(--color-glow-faint);
 }
 
-/* Flicker animation */
+/* Flicker */
 @keyframes crt-flicker {
   0%, 88%, 100% { opacity: 1; }
   89%  { opacity: 0.95; }
@@ -48,15 +57,7 @@ body {
   96%  { opacity: 0.96; }
 }
 
-/* CRT OFF overrides */
-html.crt-off #crt-overlay {
-  display: none;
-}
-html.crt-off #screen-wrap {
-  box-shadow: 0 0 0 1px #222;
-  animation: none;
-  border-radius: 4px;
-}
-html.crt-off body {
-  text-shadow: none;
-}
+/* CRT OFF — désactive tout */
+html.crt-off #crt-overlay        { display: none; }
+html.crt-off #screen-wrap        { box-shadow: 0 0 0 1px #222; animation: none; border-radius: 4px; }
+html.crt-off body                { text-shadow: none; }

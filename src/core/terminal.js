@@ -29,6 +29,8 @@ export const terminal = {
       if (locked) { e.preventDefault(); return; }
 
       if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
         const input = inputEl.value.trim();
         inputEl.value = '';
         historyIndex = -1;
@@ -52,6 +54,9 @@ export const terminal = {
           router,
           terminal: this,
         });
+
+        // Refocus input after async command completes
+        if (inputEl && !locked) inputEl.focus();
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         if (history.length === 0) return;
