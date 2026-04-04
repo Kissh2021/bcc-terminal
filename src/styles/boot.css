@@ -7,6 +7,46 @@
   gap: 0;
 }
 
+/* ── Start screen ─────────────────────────────────────────────────────────── */
+
+#boot-view.boot-start {
+  align-items: center;
+  gap: 20px;
+  cursor: pointer;
+  animation: boot-fade-in 0.5s ease;
+}
+
+#boot-view.boot-start-out {
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+
+.boot-start-symbol {
+  font-size: 56px;
+  line-height: 1;
+  color: var(--color-text);
+  text-shadow:
+    0 0 8px var(--color-glow-strong),
+    0 0 28px var(--color-glow),
+    0 0 60px var(--color-glow-faint);
+  animation: blink-symbol 1.8s step-end infinite;
+}
+
+.boot-start-hint {
+  font-size: 10px;
+  letter-spacing: 0.45em;
+  color: var(--color-text-dim);
+  opacity: 0.55;
+  animation: blink-symbol 1.8s step-end infinite;
+  animation-delay: 0.9s;
+}
+
+@keyframes blink-symbol {
+  0%, 48%  { opacity: 1; }
+  50%, 98% { opacity: 0; }
+  100%     { opacity: 1; }
+}
+
 .boot-line {
   font-size: 13px;
   line-height: 1.8;
