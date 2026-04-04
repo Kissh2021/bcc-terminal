@@ -70,6 +70,9 @@ export const router = {
     }
 
     transitioning = false;
+
+    // Notify UI components that the active view changed
+    document.dispatchEvent(new CustomEvent('bcc:route-changed', { detail: { view: name } }));
   },
 };
 

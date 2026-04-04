@@ -55,8 +55,11 @@ export const terminal = {
           terminal: this,
         });
 
-        // Refocus input after async command completes
-        if (inputEl && !locked) inputEl.focus();
+        // Refocus input after async command completes,
+        // but not if an overlay (doc-viewer) grabbed focusManager in the meantime
+        if (inputEl && !locked && !document.getElementById('doc-viewer-overlay')) {
+          inputEl.focus();
+        }
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         if (history.length === 0) return;
