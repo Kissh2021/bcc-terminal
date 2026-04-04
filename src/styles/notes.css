@@ -222,6 +222,41 @@
   margin: 0 2px;
 }
 
+/* ── Canvas origin marker (0, 0 reference) ───────────────────────────────── */
+
+.canvas-origin {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+/* Horizontal arm */
+.canvas-origin::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 1px;
+  left: -10px;
+  top: 0;
+  background: var(--color-accent);
+  opacity: 0.35;
+}
+
+/* Vertical arm */
+.canvas-origin::after {
+  content: '';
+  position: absolute;
+  width: 1px;
+  height: 20px;
+  left: 0;
+  top: -10px;
+  background: var(--color-accent);
+  opacity: 0.35;
+}
+
 /* ── Post-it ─────────────────────────────────────────────────────────────── */
 
 .note {

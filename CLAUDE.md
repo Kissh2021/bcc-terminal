@@ -86,7 +86,13 @@ avant le handler du terminal, évitant ainsi le double-dispatch ("commande incon
   - clics fond vide → passent au canvas (rubber-band / panning)
   - clics notes → reçus par les notes
 - **Panning** : clic droit + drag sur `.notes-canvas` → `translate(panX, panY)` sur `.canvas-world`.
-  Position sauvegardée par page au mouseup.
+  Implémenté avec **Pointer Events** (`pointerdown` / `pointermove` / `pointerup`) + `canvas.setPointerCapture(e.pointerId)`
+  pour neutraliser les gestures navigateur (Vivaldi, Opera). Ne pas revenir à `mousedown` / document events.
+  Position sauvegardée par page au `pointerup`.
+- **Nouvelle note** : position calculée en world-coords = `(-panX + marge, -panY + marge)` pour apparaître
+  dans le coin haut-gauche visible, peu importe le pan courant.
+- **Repère d'origine** : div `.canvas-origin` ajouté au world à chaque `renderPage()`, positionné à `(0,0)`
+  avec un crosshair CSS (`::before` horizontal, `::after` vertical).
 - **Rubber-band** : coordonnées converties en world-space en soustrayant le pan
   (`e.clientX - canvasRect.left - page.panX`).
 - **Drag des notes** : formule `noteData.x = e.clientX - startX` — intègre naturellement le pan
