@@ -39,13 +39,13 @@ export const terminal = {
         soundManager.playConfirm();
         addToHistory(input);
 
-        // Echo the input
-        outputRenderer.printLine(`> ${input}`, 'prompt');
-
-        // Switch to terminal output view if not already there
+        // Switch to terminal output view FIRST (await so outputEl is ready)
         if (router.current() !== 'terminal-output') {
-          router.push('terminal-output');
+          await router.push('terminal-output');
         }
+
+        // Echo the input (après navigation, outputEl est le bon)
+        outputRenderer.printLine(`> ${input}`, 'prompt');
 
         await commandDispatcher.dispatch(input, {
           outputRenderer,
