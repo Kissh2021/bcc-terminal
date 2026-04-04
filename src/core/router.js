@@ -28,7 +28,7 @@ export const router = {
   },
 
   async push(name, props = {}) {
-    if (currentView) viewStack.push(currentView);
+    if (currentView && name !== currentView) viewStack.push(currentView);
     await this._navigate(name, props, true);
   },
 

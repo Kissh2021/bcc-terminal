@@ -2,6 +2,7 @@ import { storage } from '../utils/storage.js';
 import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
 import { soundManager } from '../core/soundManager.js';
+import { getCrtIntensity, setCrtIntensity } from '../utils/crtIntensity.js';
 
 const PALETTES = [
   { name: 'green', label: 'Phosphore vert' },
@@ -11,7 +12,7 @@ const PALETTES = [
 ];
 
 // Sections navigables au clavier
-const SECTIONS = ['palette', 'crt', 'sound'];
+const SECTIONS = ['palette', 'crt', 'intensity', 'sound'];
 
 export function mountSettingsView(container) {
   const el = document.createElement('div');
@@ -52,6 +53,17 @@ export function mountSettingsView(container) {
         </span>
       </div>
 
+      <div class="menu-item${focusedSection === 'intensity' ? ' focused' : ''}" data-type="intensity" style="gap:12px">
+        <span class="menu-item-key">INT</span>
+        <input
+          type="range" id="intensity-slider"
+          min="0" max="1" step="0.05"
+          value="${getCrtIntensity()}"
+          style="flex:1;accent-color:var(--color-text);cursor:pointer;max-width:200px"
+        />
+        <span class="menu-item-desc" style="min-width:36px;text-align:right">${Math.round(getCrtIntensity() * 100)}%</span>
+      </div>
+
       <div class="settings-section-label" style="margin-top:12px">SON</div>
       <div class="menu-item${focusedSection === 'sound' ? ' focused' : ''}" data-type="sound-toggle">
         <span class="menu-item-key">[S]</span>
@@ -81,6 +93,17 @@ export function mountSettingsView(container) {
     });
     el.querySelector('[data-type="crt"]')?.addEventListener('click', toggleCrt);
     el.querySelector('[data-type="sound-toggle"]')?.addEventListener('click', toggleSound);
+
+    // Intensity slider
+    const intensitySlider = el.querySelector('#intensity-slider');
+    if (intensitySlider) {
+      intensitySlider.addEventListener('input', (e) => {
+        setCrtIntensity(parseFloat(e.target.value));
+        const pctEl = intensitySlider.closest('[data-type="intensity"]')?.querySelector('.menu-item-desc');
+        if (pctEl) pctEl.textContent = Math.round(parseFloat(e.target.value) * 100) + '%';
+      });
+      intensitySlider.addEventListener('change', () => render());
+    }
 
     // Volume slider
     const slider = el.querySelector('#volume-slider');
@@ -121,8 +144,9 @@ export function mountSettingsView(container) {
   const component = {
     id: 'settings',
     handleKeydown(e) {
-      // Ne pas interférer si le slider a le focus
-      if (document.activeElement?.id === 'volume-slider') return false;
+      // Ne pas interférer si un slider a le focus
+      const aid = document.activeElement?.id;
+      if (aid === 'volume-slider' || aid === 'intensity-slider') return false;
 
       if (e.key === 'Escape') { e.preventDefault(); soundManager.playBack(); router.pop(); return true; }
       if (e.key === 'c' || e.key === 'C') { toggleCrt(); return true; }

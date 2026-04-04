@@ -12,6 +12,7 @@ import './styles/notes.css';
 
 // ── Core ─────────────────────────────────────────────────────────────────────
 import { storage }           from './utils/storage.js';
+import { applyCrtIntensity, getCrtIntensity } from './utils/crtIntensity.js';
 import { commandRegistry }   from './core/commandRegistry.js';
 import { session }           from './core/session.js';
 import { router }            from './core/router.js';
@@ -44,11 +45,12 @@ async function init() {
   const savedPalette = storage.get('palette', 'green');
   document.documentElement.setAttribute('data-theme', savedPalette);
 
-  // 2. Restore CRT setting
+  // 2. Restore CRT setting + intensity
   const crtSetting = storage.get('crt', 'on');
   if (crtSetting === 'off') {
     document.documentElement.classList.add('crt-off');
   }
+  applyCrtIntensity(getCrtIntensity());
 
   // 3. Init sound (prépare l'AudioContext dès la première interaction)
   soundManager.init();
