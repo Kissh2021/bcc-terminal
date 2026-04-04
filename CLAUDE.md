@@ -47,3 +47,8 @@
 
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
 - **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+
+## Git Rules — IMPÉRATIF
+
+- **JAMAIS de commit sans accord explicite du propriétaire du projet.** Avant tout `git commit`, demander confirmation directe. Pas d'implicite, pas de "je suppose que c'est ok".
+- **JAMAIS de push.** Le push ne vient QUE du propriétaire. Ne jamais exécuter `git push` sous aucun prétexte, même si demandé dans un contexte ambigu. Si la demande est explicite et directe, confirmer une dernière fois avant d'agir.
