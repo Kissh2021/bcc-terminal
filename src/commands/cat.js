@@ -1,4 +1,5 @@
 import { resolveContent } from '../utils/githubDocs.js';
+import { showGithubLoader, hideGithubLoader } from '../ui/GithubLoader.js';
 
 export default {
   name: 'cat',
@@ -17,13 +18,18 @@ export default {
       return;
     }
 
+    const isRemote = typeof result.content === 'string' && result.content.startsWith('__GITHUB__:');
+    if (isRemote) showGithubLoader('RÉCUPÉRATION DU DOCUMENT…');
+
     let content;
     try {
       content = await resolveContent(result.content);
     } catch (err) {
+      if (isRemote) hideGithubLoader();
       outputRenderer.printLine(`ERREUR CHARGEMENT : ${err.message}`, 'error');
       return;
     }
+    if (isRemote) hideGithubLoader();
 
     if (result.isMarkdown) {
       document.dispatchEvent(new CustomEvent('bcc:open-viewer', {

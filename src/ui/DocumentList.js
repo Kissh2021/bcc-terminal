@@ -3,11 +3,15 @@ import { session }        from '../core/session.js';
 import { focusManager }   from '../core/focusManager.js';
 import { router }         from '../core/router.js';
 import { soundManager }   from '../core/soundManager.js';
-import { resolveContent, getCachedIndex, deleteGithubDoc, ejectSingleGithubDoc } from '../utils/githubDocs.js';
+import { resolveContent, getCachedIndex, deleteGithubDoc, ejectSingleGithubDoc, injectGithubDocs } from '../utils/githubDocs.js';
 import { setEditDoc }     from '../utils/docImportState.js';
 import { showGithubLoader, updateGithubLoader, hideGithubLoader } from '../ui/GithubLoader.js';
 
-export function mountDocumentList(container) {
+export async function mountDocumentList(container) {
+  showGithubLoader('RÉCUPÉRATION DES DOCUMENTS…');
+  await injectGithubDocs();
+  hideGithubLoader();
+
   const allFiles = [];
   collectFiles('/', allFiles);
 
