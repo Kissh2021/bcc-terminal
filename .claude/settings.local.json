@@ -5,7 +5,8 @@
       "Bash(npm run:*)",
       "Bash(node -e \":*)",
       "Bash(grep -E \"\\\\.js$\")",
-      "Bash(grep -E \"\\\\.\\(html|js\\)$\")"
+      "Bash(grep -E \"\\\\.\\(html|js\\)$\")",
+      "Bash(find /c/DEV/bcc-terminal/src -type f -name *cat* -o -name *open*)"
     ]
   }
 }

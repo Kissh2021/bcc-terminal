@@ -3,11 +3,15 @@ import { session }        from '../core/session.js';
 import { focusManager }   from '../core/focusManager.js';
 import { router }         from '../core/router.js';
 import { soundManager }   from '../core/soundManager.js';
-import { resolveContent, getCachedIndex, deleteGithubDoc, ejectSingleGithubDoc } from '../utils/githubDocs.js';
+import { resolveContent, getCachedIndex, deleteGithubDoc, ejectSingleGithubDoc, injectGithubDocs } from '../utils/githubDocs.js';
 import { setEditDoc }     from '../utils/docImportState.js';
 import { showGithubLoader, updateGithubLoader, hideGithubLoader } from '../ui/GithubLoader.js';
 
-export function mountDocumentList(container) {
+export async function mountDocumentList(container) {
+  showGithubLoader('RÉCUPÉRATION DES DOCUMENTS…');
+  await Promise.allSettled([injectGithubDocs(), new Promise(r => setTimeout(r, 700))]);
+  hideGithubLoader();
+
   const allFiles = [];
   collectFiles('/', allFiles);
 
@@ -141,7 +145,7 @@ export function mountDocumentList(container) {
       showGithubLoader('CHARGEMENT…');
       const [resolved] = await Promise.allSettled([
         resolveContent(result.content),
-        new Promise(r => setTimeout(r, 700)), // minimum 700ms
+        new Promise(r => setTimeout(r, 400)), // minimum 400ms
       ]);
       if (resolved.status === 'rejected') {
         hideGithubLoader();

@@ -1,9 +1,16 @@
+import { injectGithubDocs } from '../utils/githubDocs.js';
+import { showGithubLoader, hideGithubLoader } from '../ui/GithubLoader.js';
+
 export default {
   name: 'ls',
   description: 'Lister le contenu d\'un répertoire',
   usage: 'ls [chemin]',
   secret: false,
-  handler(args, { outputRenderer, vfs }) {
+  async handler(args, { outputRenderer, vfs }) {
+    showGithubLoader('RÉCUPÉRATION DES DOCUMENTS…');
+    await injectGithubDocs();
+    hideGithubLoader();
+
     const result = vfs.ls(args[0]);
     if (result.error) {
       outputRenderer.printLine(result.error, 'error');
