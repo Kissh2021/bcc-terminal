@@ -5,27 +5,51 @@ import { session } from '../core/session.js';
 import { soundManager } from '../core/soundManager.js';
 
 export async function runBootSequence(contentEl) {
-  // Create boot view
+  const appEl = document.getElementById('app');
+  appEl?.classList.add('boot-active');
+
   const bootEl = document.createElement('div');
   bootEl.id = 'boot-view';
   contentEl.appendChild(bootEl);
 
-  // Wait for user to click before starting
   await waitForClick(bootEl);
 
-  // Clear start screen, run boot
   bootEl.innerHTML = '';
   await runFullBoot(bootEl);
 
-  // Brief pause before handing off
   await delay(BOOT_TIMING.finalPause);
+
+  appEl?.classList.remove('boot-active');
 }
 
-function waitForClick(bootEl) {
-  return new Promise(resolve => {
-    bootEl.classList.add('boot-start');
-    bootEl.innerHTML = `<div class="boot-start-symbol">\u25c8</div>`;
+async function tryLoadLogo() {
+  for (const src of ['/logo.svg', '/logo.png', '/logo.webp']) {
+    const found = await new Promise(resolve => {
+      const img = new Image();
+      img.onload  = () => resolve(src);
+      img.onerror = () => resolve(null);
+      img.src = src;
+    });
+    if (found) return found;
+  }
+  return null;
+}
 
+async function waitForClick(bootEl) {
+  bootEl.classList.add('boot-start');
+
+  const logoSrc = await tryLoadLogo();
+
+  if (logoSrc) {
+    bootEl.innerHTML = `
+      <img class="boot-logo-img" src="${logoSrc}" alt="BCC Logo" draggable="false" />
+      <div class="boot-logo-hint">CLIQUER POUR DÉMARRER</div>
+    `;
+  } else {
+    bootEl.innerHTML = `<div class="boot-start-symbol">\u25c8</div>`;
+  }
+
+  return new Promise(resolve => {
     bootEl.addEventListener('click', () => {
       bootEl.classList.add('boot-start-out');
       setTimeout(() => {
