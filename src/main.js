@@ -9,6 +9,7 @@ import './styles/menu.css';
 import './styles/boot.css';
 import './styles/viewer.css';
 import './styles/notes.css';
+import './styles/docimport.css';
 
 // ── Core ─────────────────────────────────────────────────────────────────────
 import { storage }           from './utils/storage.js';
@@ -34,8 +35,12 @@ import { mountProfileView }  from './ui/ProfileView.js';
 import { mountSettingsView } from './ui/SettingsView.js';
 import { mountTerminalOutput } from './ui/TerminalOutput.js';
 import { mountLoginView }    from './ui/LoginView.js';
-import { mountNotesView }    from './ui/NotesView.js';
+import { mountNotesView }      from './ui/NotesView.js';
+import { mountDocImportView }  from './ui/DocImportView.js';
 import { openDocumentViewer, closeDocumentViewer } from './ui/DocumentViewer.js';
+import { filesystem }          from './data/filesystem.js';
+import { injectCustomDocs }    from './utils/customDocs.js';
+import { injectGithubDocs }    from './utils/githubDocs.js';
 
 // ── Expose globals for commands that need them (avoids circular deps) ─────────
 window.__bcc__ = { storage, commandRegistry };
@@ -58,6 +63,10 @@ async function init() {
   // 4. Restore session
   session.restore();
 
+  // 4b. Inject custom docs (localStorage legacy) + GitHub docs into the VFS
+  injectCustomDocs(filesystem);
+  await injectGithubDocs();
+
   // 4. Mount persistent UI elements
   mountHeader(document.getElementById('header'));
   mountTerminalBar(document.getElementById('terminal-bar'));
@@ -76,6 +85,7 @@ async function init() {
   router.register('terminal-output', (el) => mountTerminalOutput(el));
   router.register('login',           (el) => mountLoginView(el));
   router.register('notes',           (el) => mountNotesView(el));
+  router.register('doc-import',     (el) => mountDocImportView(el));
 
   // 7. Global event listeners
   document.addEventListener('bcc:open-viewer', (e) => {

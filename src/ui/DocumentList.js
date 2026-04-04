@@ -3,6 +3,7 @@ import { session } from '../core/session.js';
 import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
 import { soundManager } from '../core/soundManager.js';
+import { resolveContent } from '../utils/githubDocs.js';
 
 export function mountDocumentList(container) {
   // Find all accessible files recursively
@@ -58,7 +59,7 @@ export function mountDocumentList(container) {
     });
   }
 
-  function openFile(idx) {
+  async function openFile(idx) {
     const file = allFiles[idx];
     if (!file) return;
     if (file.restricted) {
@@ -74,9 +75,20 @@ export function mountDocumentList(container) {
       }));
       return;
     }
+
+    let content;
+    try {
+      content = await resolveContent(result.content);
+    } catch (err) {
+      document.dispatchEvent(new CustomEvent('bcc:terminal-message', {
+        detail: { text: `ERREUR CHARGEMENT : ${err.message}`, cssClass: 'error' },
+      }));
+      return;
+    }
+
     if (result.isMarkdown) {
       document.dispatchEvent(new CustomEvent('bcc:open-viewer', {
-        detail: { content: result.content, name: result.name },
+        detail: { content, name: result.name },
       }));
     } else {
       soundManager.playOpen(); soundManager.playNavigate(); router.push('terminal-output');
@@ -85,7 +97,7 @@ export function mountDocumentList(container) {
           detail: {
             lines: [
               { text: '─'.repeat(48), cssClass: 'separator' },
-              ...result.content.split('\n').map(t => ({ text: t, cssClass: '' })),
+              ...content.split('\n').map(t => ({ text: t, cssClass: '' })),
               { text: '─'.repeat(48), cssClass: 'separator' },
             ],
           },

@@ -7,7 +7,8 @@ const MENU_ITEMS = [
   { key: '1', id: 'documents', label: 'DOCUMENTS',    desc: 'Archives & rapports'  },
   { key: '2', id: 'notes',     label: 'NOTES',        desc: 'Post-its personnels'  },
   { key: '3', id: 'profile',   label: 'MON PROFIL',   desc: 'Compte & acc\u00e8s'        },
-  { key: '4', id: 'settings',  label: 'PARAM\u00c8TRES',   desc: 'Th\u00e8me & affichage'     },
+  { key: '4', id: 'settings',   label: 'PARAM\u00c8TRES',   desc: 'Th\u00e8me & affichage'     },
+  { key: '5', id: 'doc-import', label: 'IMPORTER',      desc: 'Ajouter un document'   },
 ];
 
 export function mountMainMenu(container) {
