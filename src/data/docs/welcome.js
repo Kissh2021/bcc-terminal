@@ -2,7 +2,7 @@ export default `# BIENVENUE DANS LE TERMINAL BCC
 
 ---
 
-**BUREAU DE CONTRE-CLANDESTINITÉ**
+**BCC — BUREAU DE CONTRÔLE DES CHRONOLOGIES**
 *Classification : PUBLIC*
 
 ---
@@ -37,5 +37,5 @@ Pour utiliser le terminal en ligne de commande, appuyez sur **/** ou **\`**.
 ---
 
 *"La connaissance est une arme. Utilisez-la avec discernement."*
-— Bureau de Contre-Clandestinité
+— BCC
 `;

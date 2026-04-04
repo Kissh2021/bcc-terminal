@@ -45,7 +45,7 @@ export const filesystem = {
             '═══════════════════════════════',
             '',
             'Ce terminal vous connecte aux archives du Bureau',
-            'de Contre-Clandestinité.',
+            'BCC.',
             '',
             "Pour obtenir de l'aide : tapez \"help\"",
             'Pour vous connecter  : tapez "login"',
