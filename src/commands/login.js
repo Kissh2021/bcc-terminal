@@ -1,4 +1,5 @@
 import { delay } from '../utils/typewriter.js';
+import { promptInput } from '../utils/promptInput.js';
 
 export default {
   name: 'login',
@@ -27,7 +28,7 @@ export default {
       outputRenderer.printLine('─'.repeat(40), 'separator');
       outputRenderer.printLine('Entrez un numéro ou "N" pour un nouveau compte :', 'dim');
 
-      const choice = await promptInput(terminal);
+      const choice = await promptInput();
       if (!choice) return;
 
       if (choice.toLowerCase() === 'n') {
@@ -51,12 +52,12 @@ async function doLogin(prefilledUsername, outputRenderer, session, terminal, rou
 
   if (!username) {
     outputRenderer.printLine('Identifiant :', 'dim');
-    username = await promptInput(terminal);
+    username = await promptInput();
     if (!username) return;
   }
 
   outputRenderer.printLine(`Mot de passe pour ${username.toUpperCase()} :`, 'dim');
-  const password = await promptInput(terminal, true);
+  const password = await promptInput(true);
   if (!password) return;
 
   outputRenderer.printLine('AUTHENTIFICATION EN COURS...', 'dim');
@@ -78,28 +79,4 @@ async function doLogin(prefilledUsername, outputRenderer, session, terminal, rou
   } else {
     outputRenderer.printLine(`ACCÈS REFUSÉ — ${result.error}`, 'error');
   }
-}
-
-function promptInput(terminal, mask = false) {
-  return new Promise(resolve => {
-    const inputEl = document.getElementById('terminal-input');
-    if (!inputEl) { resolve(''); return; }
-
-    // Temporarily switch to password type if masking
-    if (mask) inputEl.type = 'password';
-
-    const onEnter = (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        const val = inputEl.value.trim();
-        inputEl.value = '';
-        if (mask) inputEl.type = 'text';
-        inputEl.removeEventListener('keydown', onEnter, true);
-        resolve(val);
-      }
-    };
-    inputEl.addEventListener('keydown', onEnter, true); // capture phase: fires before terminal's handler
-    inputEl.focus();
-  });
 }
