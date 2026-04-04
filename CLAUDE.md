@@ -48,6 +48,19 @@
 - **Simplicity First**: Make every change as simple as possible. Impact minimal code.
 - **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
 
+## Architecture — Points clés
+
+### Saisie interactive dans le terminal
+Toute commande qui doit attendre une saisie utilisateur (ex : login, accounts) doit utiliser
+`src/utils/promptInput.js` au lieu d'attacher directement un listener sur `#terminal-input`.
+Cette fonction utilise la phase capture + `stopImmediatePropagation` pour intercepter l'Entrée
+avant le handler du terminal, évitant ainsi le double-dispatch ("commande inconnue").
+
+### Ajouter une commande
+1. Créer `src/commands/<nom>.js` avec `{ name, description, usage, secret, handler }`
+2. L'importer et l'enregistrer dans `src/commands/index.js`
+3. Mettre à jour `README.md` (tableau des commandes)
+
 ## Git Rules — IMPÉRATIF
 
 - **JAMAIS de commit sans accord explicite du propriétaire du projet.** Avant tout `git commit`, demander confirmation directe. Pas d'implicite, pas de "je suppose que c'est ok".
