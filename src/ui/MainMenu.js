@@ -4,9 +4,10 @@ import { router } from '../core/router.js';
 import { soundManager } from '../core/soundManager.js';
 
 const MENU_ITEMS = [
-  { key: '1', id: 'documents', label: 'DOCUMENTS',    desc: 'Archives & rapports' },
-  { key: '2', id: 'profile',   label: 'MON PROFIL',   desc: 'Compte & acc\u00e8s'       },
-  { key: '3', id: 'settings',  label: 'PARAM\u00c8TRES',   desc: 'Th\u00e8me & affichage'    },
+  { key: '1', id: 'documents', label: 'DOCUMENTS',    desc: 'Archives & rapports'  },
+  { key: '2', id: 'notes',     label: 'NOTES',        desc: 'Post-its personnels'  },
+  { key: '3', id: 'profile',   label: 'MON PROFIL',   desc: 'Compte & acc\u00e8s'        },
+  { key: '4', id: 'settings',  label: 'PARAM\u00c8TRES',   desc: 'Th\u00e8me & affichage'     },
 ];
 
 export function mountMainMenu(container) {
