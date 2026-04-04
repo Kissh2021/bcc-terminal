@@ -54,9 +54,11 @@ export const vfs = {
     if (node.type !== 'dir') return { error: `ls: N'est pas un répertoire` };
 
     const entries = Object.values(node.children || {}).map(child => ({
-      name: child.name,
-      type: child.type,
+      name:       child.name,
+      type:       child.type,
       restricted: !session.hasAccessToNode(child),
+      githubDoc:  child._githubDoc  ?? false,
+      githubPath: child._githubPath ?? null,
     }));
 
     return { entries };

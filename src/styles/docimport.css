@@ -1,3 +1,21 @@
+/* ── Boutons action dans DocumentList ────────────────────────────────────── */
+
+.doc-action-btn {
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  opacity: 0.3;
+  transition: opacity 0.15s, color 0.15s;
+  flex-shrink: 0;
+  color: var(--color-text-dim);
+}
+.doc-action-btn:hover { opacity: 1; }
+.doc-edit-btn:hover   { color: var(--color-accent); }
+.doc-del-btn:hover    { color: var(--color-error, #c0392b); }
+
 /* ── Loader overlay GitHub ───────────────────────────────────────────────── */
 
 .github-loader {
