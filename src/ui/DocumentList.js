@@ -9,7 +9,7 @@ import { showGithubLoader, updateGithubLoader, hideGithubLoader } from '../ui/Gi
 
 export async function mountDocumentList(container) {
   showGithubLoader('RÉCUPÉRATION DES DOCUMENTS…');
-  await injectGithubDocs();
+  await Promise.allSettled([injectGithubDocs(), new Promise(r => setTimeout(r, 700))]);
   hideGithubLoader();
 
   const allFiles = [];
@@ -145,7 +145,7 @@ export async function mountDocumentList(container) {
       showGithubLoader('CHARGEMENT…');
       const [resolved] = await Promise.allSettled([
         resolveContent(result.content),
-        new Promise(r => setTimeout(r, 700)), // minimum 700ms
+        new Promise(r => setTimeout(r, 400)), // minimum 400ms
       ]);
       if (resolved.status === 'rejected') {
         hideGithubLoader();

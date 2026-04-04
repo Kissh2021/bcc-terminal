@@ -19,17 +19,28 @@ export default {
     }
 
     const isRemote = typeof result.content === 'string' && result.content.startsWith('__GITHUB__:');
-    if (isRemote) showGithubLoader('RÉCUPÉRATION DU DOCUMENT…');
 
     let content;
-    try {
-      content = await resolveContent(result.content);
-    } catch (err) {
-      if (isRemote) hideGithubLoader();
-      outputRenderer.printLine(`ERREUR CHARGEMENT : ${err.message}`, 'error');
-      return;
+    if (isRemote) {
+      showGithubLoader('RÉCUPÉRATION DU DOCUMENT…');
+      const [resolved] = await Promise.allSettled([
+        resolveContent(result.content),
+        new Promise(r => setTimeout(r, 400)), // minimum 400ms
+      ]);
+      hideGithubLoader();
+      if (resolved.status === 'rejected') {
+        outputRenderer.printLine(`ERREUR CHARGEMENT : ${resolved.reason?.message}`, 'error');
+        return;
+      }
+      content = resolved.value;
+    } else {
+      try {
+        content = await resolveContent(result.content);
+      } catch (err) {
+        outputRenderer.printLine(`ERREUR CHARGEMENT : ${err.message}`, 'error');
+        return;
+      }
     }
-    if (isRemote) hideGithubLoader();
 
     if (result.isMarkdown) {
       document.dispatchEvent(new CustomEvent('bcc:open-viewer', {

@@ -144,8 +144,10 @@ avant le handler du terminal, évitant ainsi le double-dispatch ("commande incon
 - `showGithubLoader(message)` : affiche l'overlay avec barre de progression animée + ticks sonores.
 - La barre monte à ~85% en ~1.2s (fausse progression), puis saute à 100% au `hideGithubLoader()`.
 - Son : `soundManager.playLoadTick()` en boucle (setInterval 120ms), `soundManager.playLoadDone()` à la fin.
-- **Temps minimum** : `Promise.allSettled([resolveContent(...), delay(700)])` garantit 700ms d'affichage minimum.
+- **Temps minimum — liste documents** : `Promise.allSettled([injectGithubDocs(), delay(700)])` → 700ms.
+- **Temps minimum — ouverture fichier** : `Promise.allSettled([resolveContent(...), delay(400)])` → 400ms.
 - Le loader n'est PAS affiché au démarrage de l'app (`injectGithubDocs` est silencieux).
+- `ls` et `cat` (console) affichent aussi le loader lors d'un accès GitHub.
 
 ### Boot sequence — masquage UI
 - `#app.boot-active #terminal-bar { display: none }` et `#app.boot-active #header { display: none }`.
