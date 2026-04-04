@@ -2,7 +2,7 @@ export default `# RAPPORT D'INCIDENT — IR-0091
 
 ---
 
-**BUREAU DE CONTRE-CLANDESTINITÉ**
+**BCC — BUREAU DE CONTRÔLE DES CHRONOLOGIES**
 **Classification : CONFIDENTIEL — NIVEAU AGENT**
 *Accès restreint aux membres du groupe AGENT et supérieur*
 

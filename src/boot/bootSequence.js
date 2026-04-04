@@ -4,7 +4,6 @@ import { BCC_ASCII, BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } fro
 import { session } from '../core/session.js';
 
 export async function runBootSequence(contentEl) {
-  const isFirstVisit = !storage.has('visited');
   const restoredUser = session.currentUser();
 
   // Create boot view
@@ -12,12 +11,7 @@ export async function runBootSequence(contentEl) {
   bootEl.id = 'boot-view';
   contentEl.appendChild(bootEl);
 
-  if (!isFirstVisit) {
-    await runQuickBoot(bootEl, restoredUser);
-  } else {
-    await runFullBoot(bootEl);
-    storage.set('visited', true);
-  }
+  await runFullBoot(bootEl);
 
   // Brief pause before handing off
   await delay(BOOT_TIMING.finalPause);
@@ -90,7 +84,7 @@ async function runFullBoot(container) {
   const subEl = document.createElement('div');
   subEl.className = 'boot-line subtitle';
   container.appendChild(subEl);
-  await typeText(subEl, 'BUREAU DE CONTRE-CLANDESTINITÉ', skipped ? 0 : BOOT_TIMING.subtitleDelay, () => skipped);
+  await typeText(subEl, 'BUREAU DE CONTRÔLE DES CHRONOLOGIES', skipped ? 0 : BOOT_TIMING.subtitleDelay, () => skipped);
 
   if (!skipped) {
     const sep2 = document.createElement('hr');
