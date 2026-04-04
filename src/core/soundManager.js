@@ -1,15 +1,12 @@
 import { storage } from '../utils/storage.js';
 
 let audioCtx = null;
-let ctxReady = false;
 
-// Cooldowns (ms) par type de son
 const COOLDOWNS = {
-  typewriter: 40,
-  keypress:   30,
-  nav:        80,
-  scroll:     120,
-  click:      60,
+  typewriter: 35,
+  keypress:   28,
+  nav:        70,
+  scroll:     100,
 };
 const lastPlayed = {};
 
@@ -28,20 +25,18 @@ async function ensureCtx() {
   if (audioCtx.state === 'suspended') {
     await audioCtx.resume();
   }
-  ctxReady = audioCtx.state === 'running';
-  return ctxReady ? audioCtx : null;
+  return audioCtx.state === 'running' ? audioCtx : null;
 }
 
-async function playTone({ frequency = 900, duration = 0.025, volume = 0.15, type = 'square', detune = 0 }) {
+async function playTone({ frequency = 600, duration = 0.04, volume = 0.14, type = 'square', detune = 0, decay = null }) {
   if (!soundManager.isEnabled()) return;
   try {
     const ctx = await ensureCtx();
     if (!ctx) return;
 
-    const masterVolume = soundManager.getVolume();
-
-    const osc  = ctx.createOscillator();
-    const gain = ctx.createGain();
+    const master = soundManager.getVolume();
+    const osc    = ctx.createOscillator();
+    const gain   = ctx.createGain();
 
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -50,103 +45,139 @@ async function playTone({ frequency = 900, duration = 0.025, volume = 0.15, type
     osc.frequency.setValueAtTime(frequency, ctx.currentTime);
     osc.detune.setValueAtTime(detune, ctx.currentTime);
 
+    const d = decay ?? duration;
     gain.gain.setValueAtTime(0, ctx.currentTime);
-    gain.gain.linearRampToValueAtTime(volume * masterVolume, ctx.currentTime + 0.003);
-    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration);
+    gain.gain.linearRampToValueAtTime(volume * master, ctx.currentTime + 0.003);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + d);
 
     osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + duration + 0.01);
-  } catch {
-    // Silently fail
-  }
+    osc.stop(ctx.currentTime + d + 0.01);
+  } catch { /* silent */ }
+}
+
+// Joue deux tons simultanément (accord)
+async function playChord(tones) {
+  for (const t of tones) playTone(t);
 }
 
 export const soundManager = {
-  /** Caractère typewriter (boot) — avec cooldown pour éviter la saturation */
+
+  // ── Typewriter ────────────────────────────────────────────────────────────
+  /** Caractère boot/typewriter — grave, mécanique, pas goofy */
   playTypewriterChar() {
     if (!canPlay('typewriter')) return;
-    const freq = 880 + Math.random() * 160;
-    playTone({ frequency: freq, duration: 0.020, volume: 0.10, type: 'square' });
+    // Fréquence basse (200–380Hz), triangle = plus doux que square
+    const freq = 220 + Math.random() * 160;
+    playTone({ frequency: freq, duration: 0.028, volume: 0.11, type: 'triangle' });
   },
 
-  /** Frappe dans le terminal */
+  // ── Terminal ──────────────────────────────────────────────────────────────
+  /** Frappe clavier dans le terminal */
   playKeypress() {
     if (!canPlay('keypress')) return;
-    const freq = 660 + Math.random() * 80;
-    playTone({ frequency: freq, duration: 0.030, volume: 0.16, type: 'square', detune: -20 });
+    const freq = 380 + Math.random() * 60;
+    playTone({ frequency: freq, duration: 0.025, volume: 0.13, type: 'triangle', detune: -15 });
   },
 
-  /** Navigation dans les menus (↑↓) */
-  playNav() {
-    if (!canPlay('nav')) return;
-    playTone({ frequency: 750, duration: 0.025, volume: 0.12, type: 'square' });
-  },
-
-  /** Clic souris */
-  playClick() {
-    if (!canPlay('click')) return;
-    playTone({ frequency: 1000, duration: 0.018, volume: 0.10, type: 'square' });
-  },
-
-  /** Scroll */
-  playScroll() {
-    if (!canPlay('scroll')) return;
-    playTone({ frequency: 600 + Math.random() * 100, duration: 0.015, volume: 0.07, type: 'square' });
-  },
-
-  /** Validation Enter — satisfaisant, double bip montant */
+  /** Validation Enter — double bip satisfaisant */
   playConfirm() {
-    playTone({ frequency: 1100, duration: 0.055, volume: 0.13, type: 'square' });
-    setTimeout(() => playTone({ frequency: 1500, duration: 0.045, volume: 0.09, type: 'square' }), 55);
+    playTone({ frequency: 880, duration: 0.05, volume: 0.12, type: 'square' });
+    setTimeout(() => playTone({ frequency: 1320, duration: 0.04, volume: 0.09, type: 'square' }), 55);
   },
 
   /** Erreur */
   playError() {
-    playTone({ frequency: 220, duration: 0.12, volume: 0.18, type: 'sawtooth' });
+    playTone({ frequency: 180, duration: 0.14, volume: 0.18, type: 'sawtooth' });
   },
 
-  isEnabled() {
-    return storage.get('sound', 'on') !== 'off';
+  // ── Navigation ────────────────────────────────────────────────────────────
+  /** Déplacement ↑↓ dans un menu */
+  playNav() {
+    if (!canPlay('nav')) return;
+    playTone({ frequency: 520, duration: 0.022, volume: 0.10, type: 'triangle' });
   },
 
-  setEnabled(bool) {
-    storage.set('sound', bool ? 'on' : 'off');
+  /** Ouverture d'une vue / changement de page (vers l'avant) */
+  playNavigate() {
+    playTone({ frequency: 660, duration: 0.04, volume: 0.11, type: 'square' });
+    setTimeout(() => playTone({ frequency: 880, duration: 0.03, volume: 0.08, type: 'square' }), 45);
   },
 
-  getVolume() {
-    return parseFloat(storage.get('volume', '0.6'));
+  /** Retour arrière (Esc, bouton retour) */
+  playBack() {
+    playTone({ frequency: 700, duration: 0.03, volume: 0.10, type: 'square' });
+    setTimeout(() => playTone({ frequency: 500, duration: 0.04, volume: 0.08, type: 'square' }), 35);
   },
 
-  setVolume(val) {
-    const clamped = Math.max(0, Math.min(1, parseFloat(val)));
-    storage.set('volume', String(clamped));
+  // ── Documents ─────────────────────────────────────────────────────────────
+  /** Ouverture d'un document */
+  playOpen() {
+    playChord([
+      { frequency: 440, duration: 0.07, volume: 0.09, type: 'square' },
+      { frequency: 660, duration: 0.07, volume: 0.07, type: 'square' },
+    ]);
+    setTimeout(() => playTone({ frequency: 880, duration: 0.05, volume: 0.06, type: 'square' }), 70);
   },
 
-  /**
-   * Prépare l'AudioContext dès la première interaction utilisateur.
-   * Aussi écoute les clics et scrolls globaux pour les sons d'interface.
-   */
+  /** Fermeture d'un document */
+  playClose() {
+    playTone({ frequency: 600, duration: 0.05, volume: 0.09, type: 'square' });
+    setTimeout(() => playTone({ frequency: 400, duration: 0.06, volume: 0.07, type: 'square' }), 45);
+  },
+
+  // ── Settings ──────────────────────────────────────────────────────────────
+  /** Toggle on/off (CRT, son...) */
+  playToggle(isOn) {
+    playTone({
+      frequency: isOn ? 880 : 440,
+      duration: 0.05,
+      volume: 0.10,
+      type: 'square',
+    });
+  },
+
+  /** Changement de palette */
+  playPalette() {
+    playChord([
+      { frequency: 523, duration: 0.06, volume: 0.08, type: 'triangle' },
+      { frequency: 659, duration: 0.06, volume: 0.07, type: 'triangle' },
+      { frequency: 784, duration: 0.06, volume: 0.06, type: 'triangle' },
+    ]);
+  },
+
+  // ── Scroll (document viewer seulement) ───────────────────────────────────
+  playScroll() {
+    if (!canPlay('scroll')) return;
+    playTone({ frequency: 300 + Math.random() * 80, duration: 0.014, volume: 0.06, type: 'triangle' });
+  },
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  /** Login réussi */
+  playLogin() {
+    playTone({ frequency: 440, duration: 0.06, volume: 0.10, type: 'square' });
+    setTimeout(() => playTone({ frequency: 660, duration: 0.06, volume: 0.09, type: 'square' }), 60);
+    setTimeout(() => playTone({ frequency: 880, duration: 0.08, volume: 0.10, type: 'square' }), 120);
+  },
+
+  /** Logout */
+  playLogout() {
+    playTone({ frequency: 880, duration: 0.05, volume: 0.08, type: 'square' });
+    setTimeout(() => playTone({ frequency: 440, duration: 0.08, volume: 0.07, type: 'square' }), 50);
+  },
+
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
+  isEnabled()  { return storage.get('sound', 'on') !== 'off'; },
+  setEnabled(b){ storage.set('sound', b ? 'on' : 'off'); },
+  getVolume()  { return parseFloat(storage.get('volume', '0.6')); },
+  setVolume(v) { storage.set('volume', String(Math.max(0, Math.min(1, parseFloat(v))))); },
+
   init() {
     // Unlock AudioContext à la première interaction
-    const unlock = async () => {
-      await ensureCtx();
-    };
+    const unlock = async () => { await ensureCtx(); };
     document.addEventListener('keydown', unlock, { once: true });
     document.addEventListener('click',   unlock, { once: true });
 
-    // Son au clic global (hors input)
-    document.addEventListener('click', (e) => {
-      const tag = e.target?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      soundManager.playClick();
-    });
-
-    // Son au scroll global
-    document.addEventListener('wheel', () => {
-      soundManager.playScroll();
-    }, { passive: true });
-
-    // Son de navigation clavier dans les menus (touches fléchées hors input)
+    // Sons de navigation clavier dans les menus (hors champ de texte)
     document.addEventListener('keydown', (e) => {
       const tag = document.activeElement?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;

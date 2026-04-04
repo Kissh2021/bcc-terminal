@@ -2,6 +2,7 @@ import { vfs } from '../core/vfs.js';
 import { session } from '../core/session.js';
 import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
+import { soundManager } from '../core/soundManager.js';
 
 export function mountDocumentList(container) {
   // Find all accessible files recursively
@@ -78,7 +79,7 @@ export function mountDocumentList(container) {
         detail: { content: result.content, name: result.name },
       }));
     } else {
-      router.push('terminal-output');
+      soundManager.playOpen(); soundManager.playNavigate(); router.push('terminal-output');
       setTimeout(() => {
         document.dispatchEvent(new CustomEvent('bcc:print-lines', {
           detail: {
@@ -115,7 +116,7 @@ export function mountDocumentList(container) {
       }
       if (e.key === 'Escape') {
         e.preventDefault();
-        router.pop();
+        soundManager.playBack(); router.pop();
         return true;
       }
       return false;

@@ -1,6 +1,7 @@
 import { session } from '../core/session.js';
 import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
+import { soundManager } from '../core/soundManager.js';
 import { delay } from '../utils/typewriter.js';
 
 export function mountLoginView(container) {
@@ -22,7 +23,7 @@ export function mountLoginView(container) {
   const component = {
     id: 'login',
     handleKeydown(e) {
-      if (e.key === 'Escape') { e.preventDefault(); router.pop(); return true; }
+      if (e.key === 'Escape') { e.preventDefault(); soundManager.playBack(); router.pop(); return true; }
       return false;
     },
     focus() {},
@@ -102,7 +103,7 @@ function renderLoginForm(el) {
     const result = await session.login(username, password);
     if (result.success) {
       document.dispatchEvent(new CustomEvent('bcc:session-changed'));
-      router.replace('main-menu');
+      soundManager.playLogin(); router.replace('main-menu');
     } else {
       errorEl.textContent = `ACCÈS REFUSÉ — ${result.error}`;
       passwordEl.value = '';
@@ -156,7 +157,7 @@ async function replaceWithPasswordForm(el, username) {
     const result = await session.login(username, password);
     if (result.success) {
       document.dispatchEvent(new CustomEvent('bcc:session-changed'));
-      router.replace('main-menu');
+      soundManager.playLogin(); router.replace('main-menu');
     } else {
       errorEl.textContent = `ACCÈS REFUSÉ — ${result.error}`;
       passwordEl.value = '';

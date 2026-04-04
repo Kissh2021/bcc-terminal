@@ -1,6 +1,7 @@
 import { session } from '../core/session.js';
 import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
+import { soundManager } from '../core/soundManager.js';
 
 export function mountProfileView(container) {
   const el = document.createElement('div');
@@ -49,11 +50,15 @@ export function mountProfileView(container) {
   }
 
   el.querySelector('[data-action="logout"]')?.addEventListener('click', doLogout);
-  el.querySelector('[data-action="login"]')?.addEventListener('click', () => router.push('login'));
+  el.querySelector('[data-action="login"]')?.addEventListener('click', () => {
+    soundManager.playNavigate();
+    router.push('login');
+  });
 
   function doLogout() {
     if (!session.isLoggedIn()) return;
     session.logout();
+    soundManager.playLogout();
     document.dispatchEvent(new CustomEvent('bcc:session-changed'));
     router.replace('main-menu');
   }
@@ -61,7 +66,7 @@ export function mountProfileView(container) {
   const component = {
     id: 'profile',
     handleKeydown(e) {
-      if (e.key === 'Escape') { e.preventDefault(); router.pop(); return true; }
+      if (e.key === 'Escape') { e.preventDefault(); soundManager.playBack(); router.pop(); return true; }
       if ((e.key === 'd' || e.key === 'D') && user) { doLogout(); return true; }
       return false;
     },
