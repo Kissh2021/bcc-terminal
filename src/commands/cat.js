@@ -1,9 +1,11 @@
+import { resolveContent } from '../utils/githubDocs.js';
+
 export default {
   name: 'cat',
   description: 'Afficher le contenu d\'un fichier',
   usage: 'cat <fichier>',
   secret: false,
-  handler(args, { outputRenderer, vfs, router }) {
+  async handler(args, { outputRenderer, vfs, router }) {
     if (!args[0]) {
       outputRenderer.printLine('Usage: cat <fichier>', 'error');
       return;
@@ -15,15 +17,21 @@ export default {
       return;
     }
 
+    let content;
+    try {
+      content = await resolveContent(result.content);
+    } catch (err) {
+      outputRenderer.printLine(`ERREUR CHARGEMENT : ${err.message}`, 'error');
+      return;
+    }
+
     if (result.isMarkdown) {
-      // Open document viewer overlay
       document.dispatchEvent(new CustomEvent('bcc:open-viewer', {
-        detail: { content: result.content, name: result.name },
+        detail: { content, name: result.name },
       }));
     } else {
-      // Print inline in terminal output
       outputRenderer.printLine('─'.repeat(48), 'separator');
-      const lines = result.content.split('\n');
+      const lines = content.split('\n');
       for (const line of lines) {
         outputRenderer.printLine(line, '');
       }
