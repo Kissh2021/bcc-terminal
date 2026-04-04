@@ -90,14 +90,16 @@ function promptInput(terminal, mask = false) {
 
     const onEnter = (e) => {
       if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopImmediatePropagation();
         const val = inputEl.value.trim();
         inputEl.value = '';
         if (mask) inputEl.type = 'text';
-        inputEl.removeEventListener('keydown', onEnter);
+        inputEl.removeEventListener('keydown', onEnter, true);
         resolve(val);
       }
     };
-    inputEl.addEventListener('keydown', onEnter);
+    inputEl.addEventListener('keydown', onEnter, true); // capture phase: fires before terminal's handler
     inputEl.focus();
   });
 }
