@@ -251,8 +251,8 @@ export function mountNotesView(container) {
       <span class="notes-count" id="notes-count"></span>
     </div>
     <div class="notes-canvas" id="notes-canvas">
-      <div class="canvas-world" id="canvas-world"></div>
       <div class="canvas-center-marker"></div>
+      <div class="canvas-world" id="canvas-world"></div>
     </div>
   `;
   container.appendChild(view);
@@ -275,6 +275,8 @@ export function mountNotesView(container) {
   function applyPan() {
     const { panX, panY } = activePage();
     world.style.transform = `translate(${panX}px, ${panY}px)`;
+    // Scroll the grid background in sync with the world pan
+    canvas.style.backgroundPosition = `${panX}px ${panY}px`;
   }
 
   // ── Selection ──────────────────────────────────────────────────────────────────
@@ -417,6 +419,7 @@ export function mountNotesView(container) {
     e.preventDefault(); // blocks middle-click auto-scroll and right-click browser gestures
     canvas.setPointerCapture(e.pointerId); // claim the pointer before browser gestures fire
 
+    const startButton = e.button; // remember which button started the pan
     const page   = activePage();
     const startX = e.clientX - page.panX;
     const startY = e.clientY - page.panY;
@@ -428,7 +431,7 @@ export function mountNotesView(container) {
       applyPan();
     }
     function onUp(e) {
-      if (e.button !== 2) return;
+      if (e.button !== startButton) return; // only stop on the button that started the pan
       canvas.classList.remove('panning');
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('pointerup', onUp);
