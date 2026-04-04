@@ -52,10 +52,8 @@ function importNotes(onSuccess, onError) {
     reader.onload = (e) => {
       try {
         const parsed = JSON.parse(e.target.result);
-        // Support both raw array and wrapped object
         const notes = Array.isArray(parsed) ? parsed : (parsed.notes ?? null);
         if (!Array.isArray(notes)) throw new Error('Format invalide');
-        // Basic validation
         const valid = notes.filter(n => n && typeof n.id === 'string');
         onSuccess(valid);
       } catch (err) {
@@ -81,7 +79,6 @@ function makeDraggable(noteEl, noteData, canvas, onUpdate) {
 
     const startX = e.clientX - noteData.x;
     const startY = e.clientY - noteData.y;
-
     const canvasRect = canvas.getBoundingClientRect();
 
     function onMove(e) {
@@ -136,8 +133,6 @@ function makeDraggable(noteEl, noteData, canvas, onUpdate) {
 // ── Resize watcher ───────────────────────────────────────────────────────────
 
 function watchResize(noteEl, noteData, onUpdate) {
-  // On écoute mouseup sur la note : se déclenche quand l'utilisateur lâche
-  // le handle de resize CSS (bottom-right), pas à l'insertion dans le DOM.
   noteEl.addEventListener('mouseup', () => {
     const newW = noteEl.offsetWidth;
     const newH = noteEl.offsetHeight;
@@ -157,9 +152,20 @@ function bringToFront(noteEl, canvas) {
   noteEl.style.zIndex = topZ;
 }
 
+// ── Rect overlap ──────────────────────────────────────────────────────────────
+
+function rectsOverlap(sel, note) {
+  return (
+    sel.x < note.x + note.w &&
+    sel.x + sel.w > note.x &&
+    sel.y < note.y + note.h &&
+    sel.y + sel.h > note.y
+  );
+}
+
 // ── Note element factory ──────────────────────────────────────────────────────
 
-function createNoteEl(noteData, canvas, notes, onUpdate, onDelete) {
+function createNoteEl(noteData, canvas, onUpdate, onDelete) {
   const el = document.createElement('div');
   el.className  = 'note';
   el.style.left = noteData.x + 'px';
@@ -179,7 +185,6 @@ function createNoteEl(noteData, canvas, notes, onUpdate, onDelete) {
   const textarea = el.querySelector('.note-textarea');
   textarea.value = noteData.content;
 
-  // Auto-save on input (debounced)
   let saveTimer = null;
   textarea.addEventListener('input', () => {
     noteData.content = textarea.value;
@@ -187,10 +192,8 @@ function createNoteEl(noteData, canvas, notes, onUpdate, onDelete) {
     saveTimer = setTimeout(onUpdate, 300);
   });
 
-  // Bring to front on click
   el.addEventListener('mousedown', () => bringToFront(el, canvas));
 
-  // Delete
   el.querySelector('.note-delete').addEventListener('click', (e) => {
     e.stopPropagation();
     soundManager.playBack();
@@ -210,30 +213,37 @@ function createNoteEl(noteData, canvas, notes, onUpdate, onDelete) {
 
 // ── Feedback toast ────────────────────────────────────────────────────────────
 
-function showFeedback(canvas, message) {
+function showFeedback(view, message) {
+  // Remove existing toast if any
+  view.querySelector('.notes-feedback')?.remove();
   const el = document.createElement('div');
   el.className   = 'notes-feedback';
   el.textContent = message;
-  canvas.closest('#notes-view').appendChild(el);
+  view.appendChild(el);
   setTimeout(() => el.remove(), 2200);
 }
 
 // ── Main mount ────────────────────────────────────────────────────────────────
 
 export function mountNotesView(container) {
-  // Import notes CSS
   let notes = loadNotes();
+  let selectedIds = new Set();
 
   const view = document.createElement('div');
   view.id = 'notes-view';
 
-  // Toolbar
   view.innerHTML = `
     <div class="notes-toolbar">
       <span class="notes-toolbar-label">NOTES</span>
       <button class="notes-btn primary" id="notes-new">+ NOUVELLE</button>
-      <button class="notes-btn" id="notes-export">EXPORTER JSON</button>
-      <button class="notes-btn" id="notes-import">IMPORTER JSON</button>
+      <button class="notes-btn" id="notes-export">EXPORTER TOUT</button>
+      <button class="notes-btn" id="notes-import">IMPORTER</button>
+      <span class="notes-sel-bar" id="notes-sel-bar">
+        <span class="notes-sel-info" id="notes-sel-info"></span>
+        <button class="notes-btn danger" id="notes-sel-delete">SUPPRIMER</button>
+        <button class="notes-btn" id="notes-sel-export">EXPORTER</button>
+        <button class="notes-btn dim" id="notes-sel-clear">\u2715 D\u00c9SELECTIONNER</button>
+      </span>
       <span class="notes-count" id="notes-count"></span>
     </div>
     <div class="notes-canvas" id="notes-canvas"></div>
@@ -241,8 +251,83 @@ export function mountNotesView(container) {
 
   container.appendChild(view);
 
-  const canvas    = view.querySelector('#notes-canvas');
-  const countEl   = view.querySelector('#notes-count');
+  const canvas  = view.querySelector('#notes-canvas');
+  const countEl = view.querySelector('#notes-count');
+  const selBar  = view.querySelector('#notes-sel-bar');
+  const selInfo = view.querySelector('#notes-sel-info');
+
+  // ── Selection visuals ───────────────────────────────────────────────────────
+
+  function updateSelectionVisuals() {
+    canvas.querySelectorAll('.note').forEach(el => {
+      el.classList.toggle('selected', selectedIds.has(el.dataset.id));
+    });
+    const count = selectedIds.size;
+    if (count > 0) {
+      selInfo.textContent = `${count} S\u00c9LECTIONN\u00c9E${count > 1 ? 'S' : ''}`;
+      selBar.classList.add('active');
+    } else {
+      selBar.classList.remove('active');
+    }
+  }
+
+  function clearSelection() {
+    selectedIds = new Set();
+    updateSelectionVisuals();
+  }
+
+  // ── Rubber-band selection ───────────────────────────────────────────────────
+
+  canvas.addEventListener('mousedown', (e) => {
+    // Only start selection when clicking directly on the canvas background
+    if (e.target !== canvas) return;
+    e.preventDefault();
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const startX = e.clientX - canvasRect.left;
+    const startY = e.clientY - canvasRect.top;
+    let hasMoved = false;
+
+    const selEl = document.createElement('div');
+    selEl.className = 'selection-rect';
+    canvas.appendChild(selEl);
+
+    function onMove(ev) {
+      hasMoved = true;
+      const curX = ev.clientX - canvasRect.left;
+      const curY = ev.clientY - canvasRect.top;
+
+      const x = Math.min(startX, curX);
+      const y = Math.min(startY, curY);
+      const w = Math.abs(curX - startX);
+      const h = Math.abs(curY - startY);
+
+      selEl.style.left   = x + 'px';
+      selEl.style.top    = y + 'px';
+      selEl.style.width  = w + 'px';
+      selEl.style.height = h + 'px';
+
+      // Live-update which notes are in the rect
+      selectedIds = new Set();
+      notes.forEach(note => {
+        if (rectsOverlap({ x, y, w, h }, note)) selectedIds.add(note.id);
+      });
+      updateSelectionVisuals();
+    }
+
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      selEl.remove();
+      // Simple click (no drag) → clear selection
+      if (!hasMoved) clearSelection();
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  // ── Persistence ─────────────────────────────────────────────────────────────
 
   function updateCount() {
     countEl.textContent = notes.length + ' NOTE' + (notes.length !== 1 ? 'S' : '');
@@ -253,14 +338,17 @@ export function mountNotesView(container) {
     updateCount();
   }
 
+  // ── Add note to canvas ───────────────────────────────────────────────────────
+
   function addNote(noteData) {
     const el = createNoteEl(
       noteData,
       canvas,
-      notes,
       persist,
       (id) => {
         notes = notes.filter(n => n.id !== id);
+        selectedIds.delete(id);
+        updateSelectionVisuals();
         persist();
       }
     );
@@ -272,56 +360,99 @@ export function mountNotesView(container) {
   notes.forEach(addNote);
   updateCount();
 
-  // New note button
+  // ── Toolbar: main actions ────────────────────────────────────────────────────
+
   view.querySelector('#notes-new').addEventListener('click', () => {
     soundManager.playNavigate();
+    clearSelection();
     const note = makeNote();
     notes.push(note);
     persist();
     addNote(note);
-    // Focus the textarea of the new note
     setTimeout(() => {
-      const noteEl = canvas.querySelector(`[data-id="${note.id}"] .note-textarea`);
-      noteEl?.focus();
+      canvas.querySelector(`[data-id="${note.id}"] .note-textarea`)?.focus();
     }, 50);
   });
 
-  // Export
   view.querySelector('#notes-export').addEventListener('click', () => {
     soundManager.playConfirm();
     exportNotes(notes);
-    showFeedback(canvas, `${notes.length} note(s) export\u00e9e(s)`);
+    showFeedback(view, `${notes.length} note(s) export\u00e9e(s)`);
   });
 
-  // Import
   view.querySelector('#notes-import').addEventListener('click', () => {
     importNotes(
       (imported) => {
         soundManager.playLogin();
-        // Merge: ajoute sans écraser les existantes (par id)
+        // Ajoute uniquement les notes absentes (par id) — ne touche pas aux existantes
         const existingIds = new Set(notes.map(n => n.id));
         const newOnes = imported.filter(n => !existingIds.has(n.id));
         notes.push(...newOnes);
         persist();
-        // Re-render nouvelles notes
         newOnes.forEach(addNote);
-        showFeedback(canvas, `${newOnes.length} note(s) import\u00e9e(s)`);
+        showFeedback(view, `${newOnes.length} note(s) ajout\u00e9e(s)`);
       },
       (msg) => {
         soundManager.playError();
-        showFeedback(canvas, `ERREUR : ${msg}`);
+        showFeedback(view, `ERREUR : ${msg}`);
       }
     );
   });
 
-  // Focus manager
+  // ── Toolbar: selection actions ────────────────────────────────────────────────
+
+  view.querySelector('#notes-sel-delete').addEventListener('click', () => {
+    const count = selectedIds.size;
+    soundManager.playBack();
+    selectedIds.forEach(id => {
+      const el = canvas.querySelector(`[data-id="${id}"]`);
+      if (el) {
+        el.style.transition = 'opacity 0.15s ease';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 150);
+      }
+    });
+    notes = notes.filter(n => !selectedIds.has(n.id));
+    selectedIds = new Set();
+    persist();
+    updateSelectionVisuals();
+    showFeedback(view, `${count} note(s) supprim\u00e9e(s)`);
+  });
+
+  view.querySelector('#notes-sel-export').addEventListener('click', () => {
+    soundManager.playConfirm();
+    const selected = notes.filter(n => selectedIds.has(n.id));
+    exportNotes(selected);
+    showFeedback(view, `${selected.length} note(s) export\u00e9e(s)`);
+  });
+
+  view.querySelector('#notes-sel-clear').addEventListener('click', () => {
+    clearSelection();
+  });
+
+  // ── Focus manager ────────────────────────────────────────────────────────────
+
   const component = {
     id: 'notes',
     handleKeydown(e) {
-      if (e.key === 'Escape' && document.activeElement?.tagName !== 'TEXTAREA') {
+      if (e.key === 'Escape') {
+        if (selectedIds.size > 0) {
+          e.preventDefault();
+          clearSelection();
+          return true;
+        }
+        if (document.activeElement?.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          soundManager.playBack();
+          router.pop();
+          return true;
+        }
+      }
+      // Delete key supprime la sélection
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0
+          && document.activeElement?.tagName !== 'TEXTAREA') {
         e.preventDefault();
-        soundManager.playBack();
-        router.pop();
+        view.querySelector('#notes-sel-delete').click();
         return true;
       }
       return false;
