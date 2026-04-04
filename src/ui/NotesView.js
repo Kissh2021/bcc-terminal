@@ -19,7 +19,17 @@ function loadData() {
     return data;
   }
   const saved = storage.get(DATA_KEY, null);
-  if (saved) return saved;
+  if (saved) {
+    // Migrate pages that have never been panned (panX/panY === 0 or missing)
+    // so they get centred on first render instead of showing the origin at top-left.
+    saved.pages.forEach(p => {
+      if (p.panX == null || (p.panX === 0 && p.panY === 0)) {
+        p.panX = null;
+        p.panY = null;
+      }
+    });
+    return saved;
+  }
   const page = makePage('PAGE 1');
   return { activePageId: page.id, pages: [page] };
 }
@@ -31,7 +41,7 @@ function saveData(data) {
 // ── Factories ──────────────────────────────────────────────────────────────────
 
 function makePage(name, overrides = {}) {
-  return { id: crypto.randomUUID(), name, notes: [], panX: 0, panY: 0, ...overrides };
+  return { id: crypto.randomUUID(), name, notes: [], panX: null, panY: null, ...overrides };
 }
 
 function makeNote(overrides = {}) {
@@ -359,6 +369,12 @@ export function mountNotesView(container) {
     world.innerHTML = '';
     selectedIds     = new Set();
     updateSelectionVisuals();
+    // First time this page is displayed: centre the origin in the viewport.
+    const page = activePage();
+    if (page.panX === null || page.panY === null) {
+      page.panX = canvas.offsetWidth  / 2;
+      page.panY = canvas.offsetHeight / 2;
+    }
     applyPan();
     // Origin marker at world (0,0) — moves with the canvas when panning
     const originMarker = document.createElement('div');
