@@ -5,23 +5,8 @@
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.3) 100%),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 39px,
-      var(--color-border) 39px,
-      var(--color-border) 40px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 39px,
-      var(--color-border) 39px,
-      var(--color-border) 40px
-    );
-  background-size: 100% 100%, 40px 40px, 40px 40px;
+  /* Vignette only — stays fixed, not affected by pan */
+  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.3) 100%);
 }
 
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
@@ -124,6 +109,24 @@
   right: 0;
   bottom: 0;
   overflow: hidden;
+  /* Grid scrolls with the pan via background-position set in applyPan() */
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      var(--color-border) 39px,
+      var(--color-border) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 39px,
+      var(--color-border) 39px,
+      var(--color-border) 40px
+    );
+  background-size: 40px 40px, 40px 40px;
+  background-position: 0px 0px;
 }
 
 .notes-canvas.panning {
@@ -234,7 +237,7 @@
   width: 0;
   height: 0;
   pointer-events: none;
-  z-index: 5; /* above canvas background, below notes (z-index: 10) */
+  /* No z-index needed: sits before .canvas-world in DOM, so always behind notes */
 }
 
 .canvas-center-marker::before {

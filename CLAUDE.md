@@ -92,9 +92,15 @@ avant le handler du terminal, évitant ainsi le double-dispatch ("commande incon
   Position sauvegardée par page au `pointerup`.
 - **Nouvelle note** : position calculée en world-coords = `(-panX + marge, -panY + marge)` pour apparaître
   dans le coin haut-gauche visible, peu importe le pan courant.
-- **Repère centre** : div `.canvas-center-marker` ajouté une seule fois dans `.notes-canvas` (PAS dans `.canvas-world`),
+- **Repère centre** : div `.canvas-center-marker` dans `.notes-canvas` (PAS dans `.canvas-world`),
   positionné à `left:50%; top:50%` → toujours au centre du viewport, non affecté par le pan.
+  Doit être AVANT `.canvas-world` dans le DOM (pas de z-index) pour rester derrière les notes.
   Crosshair CSS (`::before` horizontal, `::after` vertical), opacité 0.3.
+- **Fond défilant** : grille répétée sur `.notes-canvas` (pas sur `#notes-view`).
+  `applyPan()` met à jour `canvas.style.backgroundPosition` en même temps que le transform du world.
+  La vignette radiale reste sur `#notes-view` (fixe, non scrollable).
+- **Arrêt pan molette** : le handler `onUp` vérifie `e.button !== startButton` (bouton capturé au départ),
+  pas `e.button !== 2` en dur, pour arrêter correctement sur button 1 ou 2.
 - **Reset vue** : bouton `⌖ VUE` dans la toolbar → remet `page.panX = 0, page.panY = 0` + `applyPan()`.
 - **Rubber-band** : coordonnées converties en world-space en soustrayant le pan
   (`e.clientX - canvasRect.left - page.panX`).
