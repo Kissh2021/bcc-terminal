@@ -14,6 +14,15 @@
   gap: 20px;
   cursor: pointer;
   animation: boot-fade-in 0.5s ease;
+  justify-content: center;
+}
+
+/* Cache header et terminal bar pendant toute la boot sequence */
+#app.boot-active #terminal-bar {
+  display: none;
+}
+#app.boot-active #header {
+  display: none;
 }
 
 #boot-view.boot-start-out {
@@ -86,6 +95,33 @@
   border: none;
   border-top: 1px solid var(--color-border);
   margin: 16px 0;
+}
+
+/* ── Logo image (optionnel, public/logo.svg|png|webp) ─────────────────────── */
+
+.boot-logo-img {
+  max-width: 280px;
+  max-height: 200px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  /* Blend avec le fond sombre → les zones sombres de l'image deviennent transparentes */
+  mix-blend-mode: screen;
+  /* Glow adapté à la palette courante */
+  filter:
+    drop-shadow(0 0 8px  var(--color-glow-strong))
+    drop-shadow(0 0 28px var(--color-glow))
+    drop-shadow(0 0 60px var(--color-glow-faint));
+  animation: blink-symbol 1.6s linear infinite;
+}
+
+.boot-logo-hint {
+  font-size: 10px;
+  letter-spacing: 0.35em;
+  color: var(--color-text-dim);
+  opacity: 0.5;
+  margin-top: 8px;
+  animation: blink 1.5s step-end infinite;
 }
 
 .boot-skip-hint {
