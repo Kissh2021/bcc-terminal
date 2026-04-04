@@ -15,21 +15,21 @@
 
 export const users = [
   {
-    id: 'usr-001',
+    id: 'usr-000',
     username: 'admin',
     // mot de passe: admin123
     passwordHash: '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9',
     group: 'admin',
   },
   {
-    id: 'usr-002',
+    id: 'usr-001',
     username: 'boss',
     // mot de passe: bcc2024
     passwordHash: 'b872b7016c6d170acc466204d0ab7e9bfa0256f1e32181d409bc7668d122cbe8',
-    group: 'agent',
+    group: 'directeur',
   },
   {
-    id: 'usr-003',
+    id: 'usr-002',
     username: 'visiteur',
     // mot de passe: visiteur
     passwordHash: '359d6d57e0a84624a1ff4dae25b68bbc207c58ac0a98c1e648c7e6c97c333a42',
