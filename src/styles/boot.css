@@ -29,22 +29,15 @@
     0 0 8px var(--color-glow-strong),
     0 0 28px var(--color-glow),
     0 0 60px var(--color-glow-faint);
-  animation: blink-symbol 1.8s step-end infinite;
+  animation: blink-symbol 1.6s linear infinite;
 }
 
-.boot-start-hint {
-  font-size: 10px;
-  letter-spacing: 0.45em;
-  color: var(--color-text-dim);
-  opacity: 0.55;
-  animation: blink-symbol 1.8s step-end infinite;
-  animation-delay: 0.9s;
-}
-
+/* 0.1s fade in → hold briefly → 1s fade out */
 @keyframes blink-symbol {
-  0%, 48%  { opacity: 1; }
-  50%, 98% { opacity: 0; }
-  100%     { opacity: 1; }
+  0%   { opacity: 0; }
+  6%   { opacity: 1; }
+  25%  { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .boot-line {

@@ -401,8 +401,9 @@ export function mountNotesView(container) {
 
   // ── Toolbar: selection actions ────────────────────────────────────────────────
 
-  view.querySelector('#notes-sel-delete').addEventListener('click', () => {
+  function deleteSelected() {
     const count = selectedIds.size;
+    if (count === 0) return;
     soundManager.playBack();
     selectedIds.forEach(id => {
       const el = canvas.querySelector(`[data-id="${id}"]`);
@@ -417,7 +418,9 @@ export function mountNotesView(container) {
     persist();
     updateSelectionVisuals();
     showFeedback(view, `${count} note(s) supprim\u00e9e(s)`);
-  });
+  }
+
+  view.querySelector('#notes-sel-delete').addEventListener('click', deleteSelected);
 
   view.querySelector('#notes-sel-export').addEventListener('click', () => {
     soundManager.playConfirm();
@@ -448,12 +451,13 @@ export function mountNotesView(container) {
           return true;
         }
       }
-      // Delete key supprime la sélection
-      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.size > 0
-          && document.activeElement?.tagName !== 'TEXTAREA') {
-        e.preventDefault();
-        view.querySelector('#notes-sel-delete').click();
-        return true;
+      // Suppr / Delete supprime la sélection (AZERTY: "Suppr" → e.key === 'Delete')
+      if (selectedIds.size > 0 && document.activeElement?.tagName !== 'TEXTAREA') {
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          e.preventDefault();
+          deleteSelected();
+          return true;
+        }
       }
       return false;
     },
