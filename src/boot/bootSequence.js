@@ -24,10 +24,7 @@ export async function runBootSequence(contentEl) {
 function waitForClick(bootEl) {
   return new Promise(resolve => {
     bootEl.classList.add('boot-start');
-    bootEl.innerHTML = `
-      <div class="boot-start-symbol">\u25c8</div>
-      <div class="boot-start-hint">CLIQUER POUR INITIALISER</div>
-    `;
+    bootEl.innerHTML = `<div class="boot-start-symbol">\u25c8</div>`;
 
     bootEl.addEventListener('click', () => {
       bootEl.classList.add('boot-start-out');
