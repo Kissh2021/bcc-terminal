@@ -96,6 +96,22 @@
   opacity: 0.6;
 }
 
+.github-loader-progress-wrap {
+  width: 100%;
+  height: 2px;
+  background: var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.github-loader-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--color-accent);
+  transition: width 0.08s linear;
+  box-shadow: 0 0 6px var(--color-accent);
+}
+
 .github-loader-status {
   font-size: 10px;
   letter-spacing: 0.2em;

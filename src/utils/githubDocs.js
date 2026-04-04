@@ -14,7 +14,6 @@
 import { storage } from './storage.js';
 import { filesystem } from '../data/filesystem.js';
 import { ACCESS_OPTIONS, allowedGroupsFor } from './customDocs.js';
-import { showGithubLoader, updateGithubLoader, hideGithubLoader } from '../ui/GithubLoader.js';
 
 // ── Config ─────────────────────────────────────────────────────────────────
 
@@ -199,24 +198,11 @@ export async function fetchDocContent(githubPath) {
  * Affiche un loader animé pendant la synchronisation.
  */
 export async function injectGithubDocs() {
-  showGithubLoader('CONNEXION ARCHIVES…');
   try {
     const index = await fetchIndex();
-    if (index.length > 0) {
-      updateGithubLoader(`${index.length} DOCUMENT(S) TROUVÉ(S)`);
-      await new Promise(r => setTimeout(r, 400)); // bref affichage du compte
-      index.forEach(doc => injectSingleGithubDoc(doc));
-      updateGithubLoader('INJECTION VFS…');
-      await new Promise(r => setTimeout(r, 300));
-    } else {
-      updateGithubLoader('ARCHIVES VIDES');
-      await new Promise(r => setTimeout(r, 500));
-    }
+    index.forEach(doc => injectSingleGithubDoc(doc));
   } catch {
-    updateGithubLoader('ERREUR CONNEXION');
-    await new Promise(r => setTimeout(r, 800));
-  } finally {
-    hideGithubLoader();
+    // Silencieux au démarrage — les docs GitHub seront absents mais l'app fonctionne
   }
 }
 
