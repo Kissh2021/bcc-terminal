@@ -3,12 +3,12 @@ import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
 import { soundManager } from '../core/soundManager.js';
 
-const MENU_ITEMS = [
-  { key: '1', id: 'documents', label: 'DOCUMENTS',    desc: 'Archives & rapports'  },
-  { key: '2', id: 'notes',     label: 'NOTES',        desc: 'Post-its personnels'  },
-  { key: '3', id: 'profile',   label: 'MON PROFIL',   desc: 'Compte & acc\u00e8s'        },
-  { key: '4', id: 'settings',   label: 'PARAM\u00c8TRES',   desc: 'Th\u00e8me & affichage'     },
-  { key: '5', id: 'doc-import', label: 'IMPORTER',      desc: 'Ajouter un document'   },
+const ALL_ITEMS = [
+  { key: '1', id: 'documents',  label: 'DOCUMENTS',  desc: 'Archives & rapports',   minGroup: null },
+  { key: '2', id: 'notes',      label: 'NOTES',       desc: 'Post-its personnels',   minGroup: null },
+  { key: '3', id: 'profile',    label: 'MON PROFIL',  desc: 'Compte & accès',        minGroup: null },
+  { key: '4', id: 'settings',   label: 'PARAMÈTRES',  desc: 'Thème & affichage',     minGroup: null },
+  { key: '5', id: 'doc-import', label: 'IMPORTER',    desc: 'Ajouter un document',   minGroup: 'directeur' },
 ];
 
 export function mountMainMenu(container) {
@@ -16,20 +16,30 @@ export function mountMainMenu(container) {
   const el = document.createElement('div');
   el.className = 'menu-view';
 
+  function getVisibleItems() {
+    return ALL_ITEMS.filter(item =>
+      !item.minGroup || session.hasGroup(item.minGroup)
+    ).map((item, i) => ({ ...item, key: String(i + 1) }));
+  }
+
   function render() {
-    const user = session.currentUser();
+    const user  = session.currentUser();
+    const items = getVisibleItems();
+    // Clamp focus index after filtering
+    if (focusedIdx >= items.length) focusedIdx = items.length - 1;
+
     el.innerHTML = `
       <div class="menu-title">
-        ${user ? `ACC\u00c8S AUTORIS\u00c9 \u2014 ${user.username.toUpperCase()}` : 'ACC\u00c8S PUBLIC'}
+        ${user ? `ACCÈS AUTORISÉ — ${user.username.toUpperCase()}` : 'ACCÈS PUBLIC'}
       </div>
-      ${MENU_ITEMS.map((item, i) => `
+      ${items.map((item, i) => `
         <div class="menu-item${i === focusedIdx ? ' focused' : ''}" data-id="${item.id}" data-idx="${i}">
           <span class="menu-item-key">[${item.key}]</span>
           <span class="menu-item-label">${item.label}</span>
           <span class="menu-item-desc">${item.desc}</span>
         </div>
       `).join('')}
-      <div class="menu-hint">\u2191\u2193 NAVIGUER &nbsp;\u00b7&nbsp; ENTR\u00c9E S\u00c9LECTIONNER &nbsp;\u00b7&nbsp; / TERMINAL</div>
+      <div class="menu-hint">↑↓ NAVIGUER &nbsp;·&nbsp; ENTRÉE SÉLECTIONNER &nbsp;·&nbsp; / TERMINAL</div>
     `;
 
     el.querySelectorAll('.menu-item').forEach(item => {
@@ -45,26 +55,27 @@ export function mountMainMenu(container) {
   const component = {
     id: 'main-menu',
     handleKeydown(e) {
+      const items = getVisibleItems();
       if (e.key === 'ArrowUp') {
         e.preventDefault();
-        focusedIdx = (focusedIdx - 1 + MENU_ITEMS.length) % MENU_ITEMS.length;
+        focusedIdx = (focusedIdx - 1 + items.length) % items.length;
         render();
         return true;
       }
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        focusedIdx = (focusedIdx + 1) % MENU_ITEMS.length;
+        focusedIdx = (focusedIdx + 1) % items.length;
         render();
         return true;
       }
       if (e.key === 'Enter') {
         e.preventDefault();
-        navigate(MENU_ITEMS[focusedIdx].id);
+        navigate(items[focusedIdx].id);
         return true;
       }
       const num = parseInt(e.key);
-      if (num >= 1 && num <= MENU_ITEMS.length) {
-        navigate(MENU_ITEMS[num - 1].id);
+      if (num >= 1 && num <= items.length) {
+        navigate(items[num - 1].id);
         return true;
       }
       return false;
