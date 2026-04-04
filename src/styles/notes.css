@@ -1,0 +1,225 @@
+/* ── Notes View ─────────────────────────────────────────────────────────── */
+
+#notes-view {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.3) 100%),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      var(--color-border) 39px,
+      var(--color-border) 40px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 39px,
+      var(--color-border) 39px,
+      var(--color-border) 40px
+    );
+  background-size: 100% 100%, 40px 40px, 40px 40px;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.notes-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 40px;
+  background: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  z-index: 100;
+  flex-shrink: 0;
+}
+
+.notes-toolbar-label {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--color-text-dim);
+  margin-right: 8px;
+}
+
+.notes-btn {
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-dim);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  transition: border-color var(--transition), color var(--transition);
+  white-space: nowrap;
+}
+.notes-btn:hover {
+  border-color: var(--color-text);
+  color: var(--color-text);
+}
+.notes-btn.primary {
+  border-color: var(--color-text-dim);
+  color: var(--color-text);
+}
+.notes-btn.primary:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.notes-count {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--color-text-dim);
+  opacity: 0.5;
+  letter-spacing: 0.15em;
+}
+
+/* ── Canvas ──────────────────────────────────────────────────────────────── */
+
+.notes-canvas {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+/* ── Post-it ─────────────────────────────────────────────────────────────── */
+
+.note {
+  position: absolute;
+  min-width: 180px;
+  min-height: 120px;
+  width: 240px;
+  height: 180px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.4),
+    2px 4px 16px rgba(0,0,0,0.5),
+    0 0 8px var(--color-glow-faint);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  resize: both;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  z-index: 10;
+}
+
+.note:focus-within,
+.note.dragging {
+  border-color: var(--color-text-dim);
+  box-shadow:
+    0 0 0 1px var(--color-border),
+    4px 8px 24px rgba(0,0,0,0.7),
+    0 0 16px var(--color-glow);
+  z-index: 50;
+}
+
+/* Header / drag handle */
+.note-header {
+  flex-shrink: 0;
+  height: 26px;
+  background: rgba(255,255,255,0.03);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  padding: 0 6px 0 8px;
+  cursor: grab;
+  gap: 6px;
+  user-select: none;
+}
+.note-header:active { cursor: grabbing; }
+
+.note-drag-dots {
+  font-size: 9px;
+  color: var(--color-text-dim);
+  opacity: 0.4;
+  letter-spacing: 0.1em;
+  flex: 1;
+}
+
+.note-delete {
+  background: none;
+  border: none;
+  color: var(--color-text-dim);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+  opacity: 0.4;
+  transition: opacity 0.15s, color 0.15s;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+.note-delete:hover {
+  opacity: 1;
+  color: var(--color-error);
+  border: none;
+}
+
+/* Textarea */
+.note-textarea {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  padding: 8px 10px;
+  resize: none;
+  overflow-y: auto;
+  caret-color: var(--color-text);
+}
+.note-textarea::placeholder {
+  color: var(--color-text-dim);
+  opacity: 0.35;
+}
+
+/* Resize grip indicator */
+.note::after {
+  content: '◢';
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 9px;
+  color: var(--color-text-dim);
+  opacity: 0.25;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Import/Export feedback ──────────────────────────────────────────────── */
+.notes-feedback {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  padding: 6px 16px;
+  z-index: 200;
+  animation: feedback-in 0.15s ease, feedback-out 0.3s ease 1.8s forwards;
+  pointer-events: none;
+}
+@keyframes feedback-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes feedback-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}

@@ -8,6 +8,7 @@ import './styles/terminal.css';
 import './styles/menu.css';
 import './styles/boot.css';
 import './styles/viewer.css';
+import './styles/notes.css';
 
 // ── Core ─────────────────────────────────────────────────────────────────────
 import { storage }           from './utils/storage.js';
@@ -32,6 +33,7 @@ import { mountProfileView }  from './ui/ProfileView.js';
 import { mountSettingsView } from './ui/SettingsView.js';
 import { mountTerminalOutput } from './ui/TerminalOutput.js';
 import { mountLoginView }    from './ui/LoginView.js';
+import { mountNotesView }    from './ui/NotesView.js';
 import { openDocumentViewer, closeDocumentViewer } from './ui/DocumentViewer.js';
 
 // ── Expose globals for commands that need them (avoids circular deps) ─────────
@@ -71,6 +73,7 @@ async function init() {
   router.register('settings',        (el) => mountSettingsView(el));
   router.register('terminal-output', (el) => mountTerminalOutput(el));
   router.register('login',           (el) => mountLoginView(el));
+  router.register('notes',           (el) => mountNotesView(el));
 
   // 7. Global event listeners
   document.addEventListener('bcc:open-viewer', (e) => {
