@@ -136,20 +136,32 @@ export function mountDocumentList(container) {
 
     // Loader si contenu distant
     const isRemote = typeof result.content === 'string' && result.content.startsWith('__GITHUB__:');
-    if (isRemote) showGithubLoader('CHARGEMENT…');
-
     let content;
-    try {
-      content = await resolveContent(result.content);
-    } catch (err) {
-      if (isRemote) hideGithubLoader();
-      document.dispatchEvent(new CustomEvent('bcc:terminal-message', {
-        detail: { text: `ERREUR CHARGEMENT : ${err.message}`, cssClass: 'error' },
-      }));
-      return;
+    if (isRemote) {
+      showGithubLoader('CHARGEMENT…');
+      const [resolved] = await Promise.allSettled([
+        resolveContent(result.content),
+        new Promise(r => setTimeout(r, 700)), // minimum 700ms
+      ]);
+      if (resolved.status === 'rejected') {
+        hideGithubLoader();
+        document.dispatchEvent(new CustomEvent('bcc:terminal-message', {
+          detail: { text: `ERREUR CHARGEMENT : ${resolved.reason?.message}`, cssClass: 'error' },
+        }));
+        return;
+      }
+      content = resolved.value;
+      hideGithubLoader();
+    } else {
+      try {
+        content = await resolveContent(result.content);
+      } catch (err) {
+        document.dispatchEvent(new CustomEvent('bcc:terminal-message', {
+          detail: { text: `ERREUR CHARGEMENT : ${err.message}`, cssClass: 'error' },
+        }));
+        return;
+      }
     }
-
-    if (isRemote) hideGithubLoader();
 
     if (result.isMarkdown) {
       document.dispatchEvent(new CustomEvent('bcc:open-viewer', {
