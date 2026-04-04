@@ -330,6 +330,10 @@ export function mountNotesView(container) {
     selectedIds     = new Set();
     updateSelectionVisuals();
     applyPan();
+    // Origin marker — visual reference for the canvas center (0, 0)
+    const originEl = document.createElement('div');
+    originEl.className = 'canvas-origin';
+    world.appendChild(originEl);
     activePage().notes.forEach(addNote);
     updateCount();
     renderPageTabs();
@@ -405,12 +409,15 @@ export function mountNotesView(container) {
   }
 
   // ── Right-click canvas panning ─────────────────────────────────────────────────
+  // Uses Pointer Events + setPointerCapture so the browser (Vivaldi, Opera…)
+  // cannot intercept the drag for its own gesture/rocker navigation.
 
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  canvas.addEventListener('mousedown', (e) => {
+  canvas.addEventListener('pointerdown', (e) => {
     if (e.button !== 2) return;
     e.preventDefault();
+    canvas.setPointerCapture(e.pointerId); // claim the pointer before browser gestures fire
 
     const page   = activePage();
     const startX = e.clientX - page.panX;
@@ -422,14 +429,15 @@ export function mountNotesView(container) {
       page.panY = e.clientY - startY;
       applyPan();
     }
-    function onUp() {
+    function onUp(e) {
+      if (e.button !== 2) return;
       canvas.classList.remove('panning');
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+      canvas.removeEventListener('pointermove', onMove);
+      canvas.removeEventListener('pointerup', onUp);
       persist();
     }
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    canvas.addEventListener('pointermove', onMove);
+    canvas.addEventListener('pointerup', onUp);
   });
 
   // ── Rubber-band selection (left click on canvas background) ────────────────────
@@ -486,7 +494,13 @@ export function mountNotesView(container) {
     soundManager.playNavigate();
     clearSelection();
     const page = activePage();
-    const note = makeNote();
+    // Place the note in the top-left of the visible viewport regardless of pan.
+    // Visible top-left in world coords = (-panX, -panY).
+    // Add a small random offset so stacked notes don't perfectly overlap.
+    const note = makeNote({
+      x: -page.panX + 20 + Math.random() * 40,
+      y: -page.panY + 60 + Math.random() * 30, // 60px: clears the 40px toolbar
+    });
     page.notes.push(note);
     persist();
     addNote(note);
