@@ -133,20 +133,20 @@ function makeDraggable(noteEl, noteData, canvas, onUpdate) {
   }, { passive: true });
 }
 
-// ── Resize observer ───────────────────────────────────────────────────────────
+// ── Resize watcher ───────────────────────────────────────────────────────────
 
 function watchResize(noteEl, noteData, onUpdate) {
-  const ro = new ResizeObserver(() => {
+  // On écoute mouseup sur la note : se déclenche quand l'utilisateur lâche
+  // le handle de resize CSS (bottom-right), pas à l'insertion dans le DOM.
+  noteEl.addEventListener('mouseup', () => {
     const newW = noteEl.offsetWidth;
     const newH = noteEl.offsetHeight;
-    if (newW !== noteData.w || newH !== noteData.h) {
+    if (newW > 0 && newH > 0 && (newW !== noteData.w || newH !== noteData.h)) {
       noteData.w = newW;
       noteData.h = newH;
       onUpdate();
     }
   });
-  ro.observe(noteEl);
-  return ro;
 }
 
 // ── Z-index management ────────────────────────────────────────────────────────
