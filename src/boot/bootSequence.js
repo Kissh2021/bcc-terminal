@@ -5,17 +5,38 @@ import { session } from '../core/session.js';
 import { soundManager } from '../core/soundManager.js';
 
 export async function runBootSequence(contentEl) {
-  const restoredUser = session.currentUser();
-
   // Create boot view
   const bootEl = document.createElement('div');
   bootEl.id = 'boot-view';
   contentEl.appendChild(bootEl);
 
+  // Wait for user to click before starting
+  await waitForClick(bootEl);
+
+  // Clear start screen, run boot
+  bootEl.innerHTML = '';
   await runFullBoot(bootEl);
 
   // Brief pause before handing off
   await delay(BOOT_TIMING.finalPause);
+}
+
+function waitForClick(bootEl) {
+  return new Promise(resolve => {
+    bootEl.classList.add('boot-start');
+    bootEl.innerHTML = `
+      <div class="boot-start-symbol">\u25c8</div>
+      <div class="boot-start-hint">CLIQUER POUR INITIALISER</div>
+    `;
+
+    bootEl.addEventListener('click', () => {
+      bootEl.classList.add('boot-start-out');
+      setTimeout(() => {
+        bootEl.classList.remove('boot-start', 'boot-start-out');
+        resolve();
+      }, 220);
+    }, { once: true });
+  });
 }
 
 async function runFullBoot(container) {
