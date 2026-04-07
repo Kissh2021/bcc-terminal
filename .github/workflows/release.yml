@@ -68,6 +68,17 @@ jobs:
           releaseDraft: false
           prerelease:   false
 
+      - name: List bundle output (debug)
+        shell: pwsh
+        run: |
+          Write-Host "=== Contenu de src-tauri/target/release/bundle ==="
+          if (Test-Path "src-tauri/target/release/bundle") {
+            Get-ChildItem -Recurse "src-tauri/target/release/bundle" | Select-Object FullName
+          } else {
+            Write-Host "Dossier bundle introuvable"
+            Get-ChildItem -Recurse "src-tauri/target/release" -Depth 2 | Select-Object FullName
+          }
+
       - name: Generate and upload latest.json
         shell: pwsh
         env:
