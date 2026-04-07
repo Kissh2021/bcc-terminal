@@ -170,6 +170,22 @@
   animation: blink 1.5s step-end infinite;
 }
 
+/* ── Voile de transition entre l'écran titre et le boot ──────────────────── */
+
+.boot-veil {
+  position: fixed;
+  inset: 0;
+  background: var(--color-bg);
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.38s ease;
+  pointer-events: none;
+}
+
+.boot-veil--out {
+  opacity: 0;
+}
+
 /* ── Overlay écran titre (rappelable depuis le menu) ─────────────────────── */
 
 #splash-overlay {

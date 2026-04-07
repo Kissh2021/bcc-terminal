@@ -3,6 +3,98 @@
   background: var(--color-bg-surface);
 }
 
+/* ── Start button ─────────────────────────────────────────────────────────── */
+
+#start-btn {
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  padding: 4px 10px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: background 0.1s ease, color 0.1s ease, border-color 0.1s ease;
+  user-select: none;
+}
+
+#start-btn:hover,
+#start-btn:focus-visible {
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border-color: var(--color-accent);
+  outline: none;
+}
+
+/* ── Start menu popup ─────────────────────────────────────────────────────── */
+
+#start-menu {
+  position: fixed;
+  bottom: 52px;       /* juste au-dessus du terminal-bar (44px + 8px) */
+  min-width: 180px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-accent);
+  box-shadow: 0 0 16px var(--color-glow), 0 0 4px var(--color-glow-strong);
+  z-index: 8000;
+  animation: start-menu-in 0.12s ease;
+  padding: 4px 0;
+}
+
+#start-menu.start-menu--out {
+  animation: start-menu-out 0.15s ease forwards;
+}
+
+@keyframes start-menu-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes start-menu-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(6px); }
+}
+
+.start-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background 0.08s ease, color 0.08s ease;
+  user-select: none;
+}
+
+.start-menu-item:hover {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}
+
+.start-menu-item--danger {
+  color: var(--color-text-dim);
+}
+
+.start-menu-item--danger:hover {
+  background: var(--color-error, #c0392b);
+  color: #fff;
+}
+
+.start-menu-icon {
+  opacity: 0.8;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.start-menu-sep {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
 .terminal-prompt-label {
   color: var(--color-prompt);
   opacity: 0.7;

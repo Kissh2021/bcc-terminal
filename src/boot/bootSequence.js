@@ -15,7 +15,20 @@ export async function runBootSequence(contentEl) {
 
   await waitForClick(bootEl);
 
+  // Fondu au noir entre l'écran titre et la séquence de boot
+  const veil = document.createElement('div');
+  veil.className = 'boot-veil';
+  document.body.appendChild(veil);
+  await delay(180);
+
   bootEl.innerHTML = '';
+
+  // Dissoudre le voile en parallèle du démarrage du boot
+  delay(60).then(() => {
+    veil.classList.add('boot-veil--out');
+    delay(380).then(() => veil.remove());
+  });
+
   await runFullBoot(bootEl);
 
   await delay(BOOT_TIMING.finalPause);
