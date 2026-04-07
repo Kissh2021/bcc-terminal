@@ -37,6 +37,8 @@ import { mountTerminalOutput } from './ui/TerminalOutput.js';
 import { mountLoginView }    from './ui/LoginView.js';
 import { mountNotesView }      from './ui/NotesView.js';
 import { mountDocImportView }  from './ui/DocImportView.js';
+import { mountAccountsView }   from './ui/AccountsView.js';
+import { checkForUpdates }     from './utils/updater.js';
 import { openDocumentViewer, closeDocumentViewer } from './ui/DocumentViewer.js';
 import { filesystem }          from './data/filesystem.js';
 import { injectCustomDocs }    from './utils/customDocs.js';
@@ -60,8 +62,8 @@ async function init() {
   // 3. Init sound (prépare l'AudioContext dès la première interaction)
   soundManager.init();
 
-  // 4. Restore session
-  session.restore();
+  // 4. Restore session (vérifie le token auprès du serveur)
+  await session.restore();
 
   // 4b. Inject custom docs (localStorage legacy) + GitHub docs into the VFS
   injectCustomDocs(filesystem);
@@ -86,6 +88,7 @@ async function init() {
   router.register('login',           (el) => mountLoginView(el));
   router.register('notes',           (el) => mountNotesView(el));
   router.register('doc-import',     (el) => mountDocImportView(el));
+  router.register('accounts',       (el) => mountAccountsView(el));
 
   // 7. Global event listeners
   document.addEventListener('bcc:open-viewer', (e) => {
@@ -99,6 +102,9 @@ async function init() {
   // 8. Boot sequence → then main menu
   await runBootSequence(contentEl);
   await router.replace('main-menu');
+
+  // 9. Vérifier les mises à jour en arrière-plan (silencieux si pas de MAJ)
+  checkForUpdates((text, cssClass) => outputRenderer.printLine(text, cssClass));
 }
 
 init();

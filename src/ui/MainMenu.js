@@ -9,6 +9,7 @@ const ALL_ITEMS = [
   { key: '3', id: 'profile',    label: 'MON PROFIL',  desc: 'Compte & accès',        minGroup: null },
   { key: '4', id: 'settings',   label: 'PARAMÈTRES',  desc: 'Thème & affichage',     minGroup: null },
   { key: '5', id: 'doc-import', label: 'IMPORTER',    desc: 'Ajouter un document',   minGroup: 'directeur' },
+  { key: '6', id: 'accounts',  label: 'COMPTES',     desc: 'Gestion des utilisateurs', minGroup: 'admin' },
 ];
 
 export function mountMainMenu(container) {

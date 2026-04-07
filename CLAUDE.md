@@ -155,6 +155,30 @@ avant le handler du terminal, évitant ainsi le double-dispatch ("commande incon
 - **Logo personnalisé** : `tryLoadLogo()` tente `/logo.svg`, `/logo.png`, `/logo.webp` dans `public/`. Si trouvé → affiché avec `mix-blend-mode: screen` + glow thème. Sinon → diamant `◈` par défaut.
 - Format recommandé : SVG (prioritaire) ou PNG 512×512px fond transparent.
 
+### Authentification — architecture Tauri (desktop)
+- **App desktop Tauri 2.x** — plus de serveur Express ni de version web.
+- **Utilisateurs** stockés dans `_users.json` à la racine du repo privé `kissh2021/bcc-docs` (même repo que les documents).
+- **Commandes Rust** dans `src-tauri/src/main.rs` :
+  - `login(username, password)` — fetch `_users.json` avec le token readonly embarqué, compare SHA-256, retourne `{ id, username, group }`.
+  - `restore_session(user_id)` — vérifie que l'utilisateur existe toujours dans `_users.json`.
+  - `hash_password(password)` — retourne le SHA-256 hex (utilisé par AccountsView pour créer/resetter les mots de passe).
+- **Token readonly** : embarqué dans le binaire Rust via `env!("GITHUB_READONLY_TOKEN")`. Défini dans `.cargo/config.toml` en local (gitignored), et comme secret GitHub en CI.
+- **`session.restore()`** est `async` — appelle `invoke('restore_session')` au démarrage. `main.js` l'attend avec `await`.
+- **Stockage client** : `localStorage` clé `bcc_session` → `{ id, username, group }`. Plus de token JWT côté JS.
+- **Gestion des comptes** : `src/ui/AccountsView.js` — vue admin (minGroup: 'admin') pour créer/éditer/supprimer des utilisateurs via l'API GitHub admin. Même token admin que pour les documents.
+- `src/utils/githubUsers.js` — CRUD sur `_users.json` (miroir de `githubDocs.js`).
+- **Auto-updater** : `tauri-plugin-updater` + `src/utils/updater.js`. Vérifie les MAJ au démarrage via le manifeste `latest.json` des releases GitHub. Déclencher une release : `git tag v1.x.x && git push --tags`.
+
+### Tauri — configuration et build
+- `src-tauri/tauri.conf.json` — config fenêtre, bundle NSIS Windows, endpoint updater.
+- `src-tauri/capabilities/default.json` — permissions `core:default` + `updater:default`.
+- `.cargo/config.toml` — variables d'env Rust locales (gitignored). Y mettre `GITHUB_READONLY_TOKEN`.
+- **Dev** : `npm run tauri:dev` — lance Vite + WebView Tauri simultanément.
+- **Build** : `npm run tauri:build` — produit `src-tauri/target/release/bundle/nsis/*.exe`.
+- **Release CI** : push un tag `v*` → `.github/workflows/release.yml` build et publie sur GitHub Releases.
+- **Icônes** : générer avec `npx tauri icon public/logo.png` → popule `src-tauri/icons/`.
+- **Clé de signature updater** : générer avec `npm run tauri -- signer generate`, stocker la clé privée dans le secret GitHub `TAURI_SIGNING_PRIVATE_KEY`, et la clé publique dans `tauri.conf.json` → `plugins.updater.pubkey`.
+
 ### Variables d'environnement Vite
 - Préfixe obligatoire : `VITE_` pour que la variable soit injectée dans le bundle côté client.
 - En local : fichier `.env` à la racine (gitignored).

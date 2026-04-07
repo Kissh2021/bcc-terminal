@@ -3,3 +3,6 @@ dist/
 .DS_Store
 *.local
 .env
+server/users.json
+.cargo/config.toml
+src-tauri/target/
