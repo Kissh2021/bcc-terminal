@@ -95,6 +95,62 @@
   margin: 4px 0;
 }
 
+/* ── Toast système (check MAJ, statuts) ───────────────────────────────────── */
+
+.start-toast {
+  position: fixed;
+  bottom: 52px;
+  min-width: 220px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 0 12px var(--color-glow);
+  z-index: 8000;
+  padding: 10px 14px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--color-text);
+  animation: start-menu-in 0.12s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.start-toast--out {
+  animation: start-menu-out 0.3s ease forwards;
+}
+
+.start-toast-icon {
+  color: var(--color-accent);
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.start-toast-update {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.start-toast-btn {
+  margin-left: auto;
+  background: var(--color-accent);
+  color: var(--color-bg);
+  border: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  padding: 3px 8px;
+  cursor: pointer;
+  border-radius: 1px;
+  flex-shrink: 0;
+  transition: opacity 0.1s ease;
+}
+
+.start-toast-btn:hover {
+  opacity: 0.85;
+}
+
 .terminal-prompt-label {
   color: var(--color-prompt);
   opacity: 0.7;

@@ -4,6 +4,7 @@ import { outputRenderer } from '../core/outputRenderer.js';
 import { soundManager } from '../core/soundManager.js';
 import { showSplashScreen } from '../boot/bootSequence.js';
 import { getCurrentWindow } from '@tauri-apps/api/window';
+import { checkUpdate, performUpdate } from '../utils/updater.js';
 
 export function mountTerminalBar(el) {
   el.innerHTML = `
@@ -73,6 +74,9 @@ export function mountTerminalBar(el) {
       <div class="start-menu-item" data-action="veille">
         <span class="start-menu-icon">◌</span> VEILLE
       </div>
+      <div class="start-menu-item" data-action="updates">
+        <span class="start-menu-icon">⬆</span> MISES À JOUR
+      </div>
       <div class="start-menu-sep"></div>
       <div class="start-menu-item start-menu-item--danger" data-action="eteindre">
         <span class="start-menu-icon">⏻</span> ÉTEINDRE
@@ -90,6 +94,8 @@ export function mountTerminalBar(el) {
         closeStartMenu();
         if (action === 'veille') {
           showSplashScreen();
+        } else if (action === 'updates') {
+          runUpdateCheck(startBtn);
         } else if (action === 'eteindre') {
           getCurrentWindow().close();
         }
@@ -126,6 +132,65 @@ export function mountTerminalBar(el) {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && menuEl) { e.preventDefault(); closeStartMenu(); }
   });
+
+  // ── Toast système (au-dessus du bouton démarrer) ─────────────────────────
+  let toastEl = null;
+
+  function showToast(html) {
+    if (toastEl) toastEl.remove();
+    toastEl = document.createElement('div');
+    toastEl.className = 'start-toast';
+    toastEl.innerHTML = html;
+    const rect = startBtn.getBoundingClientRect();
+    toastEl.style.left = `${rect.left}px`;
+    document.body.appendChild(toastEl);
+    return toastEl;
+  }
+
+  function hideToast(delay = 0) {
+    if (!toastEl) return;
+    const t = toastEl;
+    setTimeout(() => {
+      t.classList.add('start-toast--out');
+      setTimeout(() => t.remove(), 300);
+    }, delay);
+    toastEl = null;
+  }
+
+  async function runUpdateCheck() {
+    showToast('<span class="start-toast-icon">⟳</span> VÉRIFICATION…');
+
+    const update = await checkUpdate();
+
+    if (!update) {
+      showToast('<span class="start-toast-icon">✓</span> APPLICATION À JOUR');
+      hideToast(2000);
+      return;
+    }
+
+    // Mise à jour disponible — proposer l'installation
+    const t = showToast(`
+      <div class="start-toast-update">
+        <span class="start-toast-icon">⬆</span>
+        <span>v${update.version} DISPONIBLE</span>
+        <button class="start-toast-btn" id="toast-install-btn">INSTALLER</button>
+      </div>
+    `);
+
+    t.querySelector('#toast-install-btn').addEventListener('click', async () => {
+      t.querySelector('#toast-install-btn').remove();
+      const statusEl = t.querySelector('span:last-of-type');
+      statusEl.textContent = 'TÉLÉCHARGEMENT…';
+      try {
+        await performUpdate(update, (pct) => {
+          statusEl.textContent = `INSTALLATION… ${pct}%`;
+        });
+      } catch (err) {
+        statusEl.textContent = `ERREUR — ${err?.message ?? err}`;
+        hideToast(3000);
+      }
+    });
+  }
 
   function claimFocus() {
     focusManager.claim({

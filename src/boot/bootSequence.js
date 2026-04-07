@@ -3,7 +3,7 @@ import { delay } from '../utils/typewriter.js';
 import { BCC_ASCII, BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } from './bootFrames.js';
 import { session } from '../core/session.js';
 import { soundManager } from '../core/soundManager.js';
-import { performUpdate } from '../utils/updater.js';
+import { performUpdate, checkUpdate } from '../utils/updater.js';
 
 export async function runBootSequence(contentEl, updatePromise = Promise.resolve(null)) {
   const appEl = document.getElementById('app');
@@ -45,6 +45,9 @@ export async function showSplashScreen() {
   overlay.id = 'splash-overlay';
   document.body.appendChild(overlay);
 
+  // Lancer le check MAJ en parallèle du chargement du logo
+  const updatePromise = checkUpdate();
+
   const logoSrc = await tryLoadLogo();
 
   if (logoSrc) {
@@ -61,8 +64,40 @@ export async function showSplashScreen() {
     overlay.innerHTML = `<div class="boot-start-symbol">\u25c8</div>`;
   }
 
+  let dismissed = false;
+
+  // Afficher le badge MAJ si disponible (même logique que waitForClick)
+  updatePromise.then(update => {
+    if (!update || dismissed) return;
+
+    const badge = document.createElement('div');
+    badge.className = 'boot-update-badge';
+    badge.textContent = `⬆ MISE À JOUR v${update.version} DISPONIBLE`;
+    overlay.appendChild(badge);
+
+    badge.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (dismissed) return;
+      dismissed = true;
+
+      badge.classList.add('boot-update-installing');
+      badge.textContent = 'TÉLÉCHARGEMENT EN COURS…';
+
+      try {
+        await performUpdate(update, (pct) => {
+          badge.textContent = `INSTALLATION… ${pct}%`;
+        });
+      } catch (err) {
+        badge.textContent = `ERREUR — ${err?.message ?? err}`;
+        badge.classList.remove('boot-update-installing');
+        dismissed = false;
+      }
+    });
+  });
+
   await new Promise(resolve => {
     overlay.addEventListener('click', () => {
+      dismissed = true;
       overlay.style.opacity = '0';
       setTimeout(() => {
         overlay.remove();
