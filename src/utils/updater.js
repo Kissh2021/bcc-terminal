@@ -19,8 +19,10 @@ import { invoke } from '@tauri-apps/api/core';
 export async function checkUpdate() {
   try {
     const update = await check();
+    console.info('[updater] check →', update?.available ? `v${update.version} disponible` : 'aucune MAJ');
     return update?.available ? update : null;
-  } catch {
+  } catch (err) {
+    console.warn('[updater] erreur check :', err);
     return null;
   }
 }

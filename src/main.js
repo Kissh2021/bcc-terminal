@@ -38,7 +38,7 @@ import { mountLoginView }    from './ui/LoginView.js';
 import { mountNotesView }      from './ui/NotesView.js';
 import { mountDocImportView }  from './ui/DocImportView.js';
 import { mountAccountsView }   from './ui/AccountsView.js';
-import { checkForUpdates }     from './utils/updater.js';
+import { checkForUpdates, checkUpdate } from './utils/updater.js';
 import { getVersion }          from '@tauri-apps/api/app';
 import { getCurrentWindow }    from '@tauri-apps/api/window';
 import { openDocumentViewer, closeDocumentViewer } from './ui/DocumentViewer.js';
@@ -50,6 +50,10 @@ import { injectGithubDocs }    from './utils/githubDocs.js';
 window.__bcc__ = { storage, commandRegistry };
 
 async function init() {
+  // 0. Lancer la vérification de MAJ immédiatement — en parallèle de tout le reste
+  //    pour qu'elle soit (presque certainement) résolue quand l'écran titre s'affiche
+  const updatePromise = checkUpdate();
+
   // 1. Restore palette
   const savedPalette = storage.get('palette', 'green');
   document.documentElement.setAttribute('data-theme', savedPalette);
@@ -102,7 +106,7 @@ async function init() {
   });
 
   // 8. Boot sequence → then main menu
-  await runBootSequence(contentEl);
+  await runBootSequence(contentEl, updatePromise);
   await router.replace('main-menu');
 
   // 9. Afficher la version dans le titre de la fenêtre

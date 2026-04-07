@@ -3,9 +3,9 @@ import { delay } from '../utils/typewriter.js';
 import { BCC_ASCII, BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } from './bootFrames.js';
 import { session } from '../core/session.js';
 import { soundManager } from '../core/soundManager.js';
-import { checkUpdate, performUpdate } from '../utils/updater.js';
+import { performUpdate } from '../utils/updater.js';
 
-export async function runBootSequence(contentEl) {
+export async function runBootSequence(contentEl, updatePromise = Promise.resolve(null)) {
   const appEl = document.getElementById('app');
   appEl?.classList.add('boot-active');
 
@@ -13,7 +13,7 @@ export async function runBootSequence(contentEl) {
   bootEl.id = 'boot-view';
   contentEl.appendChild(bootEl);
 
-  await waitForClick(bootEl);
+  await waitForClick(bootEl, updatePromise);
 
   // Fondu au noir entre l'écran titre et la séquence de boot
   const veil = document.createElement('div');
@@ -85,11 +85,8 @@ async function tryLoadLogo() {
   return null;
 }
 
-async function waitForClick(bootEl) {
+async function waitForClick(bootEl, updatePromise) {
   bootEl.classList.add('boot-start');
-
-  // Lance la vérification des MAJ en arrière-plan (non bloquant)
-  const updatePromise = checkUpdate();
 
   const logoSrc = await tryLoadLogo();
 
