@@ -39,9 +39,10 @@ jobs:
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN:                  ${{ secrets.GITHUB_TOKEN }}
-          # Token readonly GitHub embarqué dans le binaire Rust via env!()
-          # Le secret GitHub s'appelle VITE_GITHUB_READONLY_TOKEN (partagé avec l'ancien workflow web)
+          # Pour Rust — embarqué dans le binaire via env!("GITHUB_READONLY_TOKEN")
           GITHUB_READONLY_TOKEN:         ${{ secrets.VITE_GITHUB_READONLY_TOKEN }}
+          # Pour Vite — injecté dans le bundle JS via import.meta.env (githubDocs.js)
+          VITE_GITHUB_READONLY_TOKEN:    ${{ secrets.VITE_GITHUB_READONLY_TOKEN }}
           # Clé de signature pour l'auto-updater
           # Générer avec : npm run tauri -- signer generate -w ~/.tauri/bcc.key
           TAURI_SIGNING_PRIVATE_KEY:          ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
