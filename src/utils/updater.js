@@ -68,19 +68,12 @@ export async function checkForUpdates(printLine) {
 
     printLine('', '');
     printLine('━'.repeat(48), 'separator');
-    printLine(` MISE À JOUR DISPONIBLE — v${update.version}`, 'accent');
+    printLine(` ⬆ MISE À JOUR v${update.version} DISPONIBLE`, 'accent');
     if (update.body) printLine(` ${update.body}`, 'dim');
-    printLine(' Téléchargement en cours…', 'dim');
+    printLine(' Utilisez le menu ◈ BCC → MISES À JOUR pour installer.', 'dim');
     printLine('━'.repeat(48), 'separator');
 
-    await performUpdate(update, (pct) => {
-      if (pct % 20 === 0) {
-        printLine(` Téléchargement… ${pct}%`, 'dim');
-      }
-    });
-
   } catch (err) {
-    // Affiche l'erreur dans le terminal pour faciliter le debug
     printLine(`[UPDATER] ${err?.message ?? err}`, 'dim');
   }
 }

@@ -3,7 +3,7 @@ import { delay } from '../utils/typewriter.js';
 import { BCC_ASCII, BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } from './bootFrames.js';
 import { session } from '../core/session.js';
 import { soundManager } from '../core/soundManager.js';
-import { performUpdate, checkUpdate } from '../utils/updater.js';
+import { checkUpdate } from '../utils/updater.js';
 
 export async function runBootSequence(contentEl, updatePromise = Promise.resolve(null)) {
   const appEl = document.getElementById('app');
@@ -53,33 +53,13 @@ export async function showSplashScreen() {
 
   let dismissed = false;
 
-  // Afficher le badge MAJ si disponible (même logique que waitForClick)
+  // Afficher le badge MAJ informatif (l'utilisateur met à jour via le menu démarrer)
   updatePromise.then(update => {
     if (!update || dismissed) return;
-
     const badge = document.createElement('div');
     badge.className = 'boot-update-badge';
     badge.textContent = `⬆ MISE À JOUR v${update.version} DISPONIBLE`;
     overlay.appendChild(badge);
-
-    badge.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      if (dismissed) return;
-      dismissed = true;
-
-      badge.classList.add('boot-update-installing');
-      badge.textContent = 'TÉLÉCHARGEMENT EN COURS…';
-
-      try {
-        await performUpdate(update, (pct) => {
-          badge.textContent = `INSTALLATION… ${pct}%`;
-        });
-      } catch (err) {
-        badge.textContent = `ERREUR — ${err?.message ?? err}`;
-        badge.classList.remove('boot-update-installing');
-        dismissed = false;
-      }
-    });
   });
 
   await new Promise(resolve => {
@@ -156,35 +136,13 @@ async function waitForClick(bootEl, updatePromise) {
     // Clic normal → démarrage du boot
     bootEl.addEventListener('click', () => doResolve(resolve), { once: true });
 
-    // Quand la vérif MAJ aboutit, afficher le badge si dispo
+    // Afficher le badge MAJ informatif (l'utilisateur met à jour via le menu démarrer)
     updatePromise.then(update => {
       if (!update || resolved) return;
-
       const badge = document.createElement('div');
       badge.className = 'boot-update-badge';
       badge.textContent = `⬆ MISE À JOUR v${update.version} DISPONIBLE`;
       bootEl.appendChild(badge);
-
-      badge.addEventListener('click', async (e) => {
-        e.stopPropagation(); // ne pas déclencher le clic normal
-        if (resolved) return;
-        resolved = true;
-        if (blinkInterval) clearInterval(blinkInterval);
-
-        badge.classList.add('boot-update-installing');
-        badge.textContent = 'TÉLÉCHARGEMENT EN COURS…';
-
-        try {
-          await performUpdate(update, (pct) => {
-            badge.textContent = `INSTALLATION… ${pct}%`;
-          });
-        } catch (err) {
-          // En cas d'erreur, on laisse l'utilisateur continuer
-          badge.textContent = `ERREUR MAJ — ${err?.message ?? err}`;
-          badge.classList.remove('boot-update-installing');
-          resolved = false; // permet de cliquer pour continuer quand même
-        }
-      });
     });
   });
 }

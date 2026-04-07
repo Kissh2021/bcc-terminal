@@ -27,6 +27,7 @@ function loadData() {
         p.panX = null;
         p.panY = null;
       }
+      p.connections = p.connections ?? [];
     });
     return saved;
   }
@@ -41,7 +42,11 @@ function saveData(data) {
 // ── Factories ──────────────────────────────────────────────────────────────────
 
 function makePage(name, overrides = {}) {
-  return { id: crypto.randomUUID(), name, notes: [], panX: null, panY: null, ...overrides };
+  return { id: crypto.randomUUID(), name, notes: [], connections: [], panX: null, panY: null, ...overrides };
+}
+
+function makeConnection(fromId, toId) {
+  return { id: crypto.randomUUID(), fromId, toId, color: null, waypoints: [] };
 }
 
 function makeNote(overrides = {}) {
@@ -93,6 +98,22 @@ function importNotes(onSuccess, onError) {
   input.click();
 }
 
+// ── Connection colors ─────────────────────────────────────────────────────────
+
+const CONN_COLORS = {
+  default: null,       // uses CSS var --color-accent
+  red:     '#ff4444',
+  amber:   '#ffaa00',
+  blue:    '#4488ff',
+  dim:     null,       // uses CSS var --color-text-dim
+};
+
+function resolveConnColor(color) {
+  if (!color || color === 'default') return 'var(--color-accent)';
+  if (color === 'dim') return 'var(--color-text-dim)';
+  return CONN_COLORS[color] || 'var(--color-accent)';
+}
+
 // ── Z-index ────────────────────────────────────────────────────────────────────
 
 let topZ = 10;
@@ -101,15 +122,21 @@ function bringToFront(el) { el.style.zIndex = ++topZ; }
 // ── Drag (unclamped — infinite canvas, supports multi-selection drag) ─────────
 // getSelection(noteId) → [{noteData, noteEl}] for all notes to move together.
 
-function makeDraggable(noteEl, noteData, onUpdate, getSelection) {
+function makeDraggable(noteEl, noteData, onUpdate, getSelection, { onDragMove, onConnStart } = {}) {
   const header = noteEl.querySelector('.note-header');
 
   header.addEventListener('mousedown', (e) => {
     if (e.target.classList.contains('note-delete')) return;
+    // Shift+drag or connect mode → start connection instead of moving
+    if (e.button === 0 && onConnStart && onConnStart.shouldConnect(e)) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      onConnStart(noteData.id, e);
+      return;
+    }
     e.preventDefault();
     bringToFront(noteEl);
 
-    // Resolve which notes move (multi or single)
     const group = getSelection(noteData.id);
     group.forEach(({ noteEl: el }) => el?.classList.add('dragging'));
 
@@ -120,13 +147,14 @@ function makeDraggable(noteEl, noteData, onUpdate, getSelection) {
     function onMove(e) {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-      initPos.forEach(({ nd, ix, iy, noteEl: el }) => {
+      initPos.forEach(({ nd, ix, iy }) => {
         nd.x = ix + dx;
         nd.y = iy + dy;
       });
       group.forEach(({ noteData: nd, noteEl: el }) => {
         if (el) { el.style.left = nd.x + 'px'; el.style.top = nd.y + 'px'; }
       });
+      if (onDragMove) onDragMove();
     }
     function onUp() {
       group.forEach(({ noteEl: el }) => el?.classList.remove('dragging'));
@@ -156,6 +184,7 @@ function makeDraggable(noteEl, noteData, onUpdate, getSelection) {
       group.forEach(({ noteData: nd, noteEl: el }) => {
         if (el) { el.style.left = nd.x + 'px'; el.style.top = nd.y + 'px'; }
       });
+      if (onDragMove) onDragMove();
     }
     function onEnd() {
       header.removeEventListener('touchmove', onMove);
@@ -169,7 +198,7 @@ function makeDraggable(noteEl, noteData, onUpdate, getSelection) {
 
 // ── Resize watcher ─────────────────────────────────────────────────────────────
 
-function watchResize(noteEl, noteData, onUpdate) {
+function watchResize(noteEl, noteData, onUpdate, onDragMove) {
   noteEl.addEventListener('mouseup', () => {
     const w = noteEl.offsetWidth;
     const h = noteEl.offsetHeight;
@@ -177,6 +206,7 @@ function watchResize(noteEl, noteData, onUpdate) {
       noteData.w = w;
       noteData.h = h;
       onUpdate();
+      if (onDragMove) onDragMove();
     }
   });
 }
@@ -194,7 +224,7 @@ function rectsOverlap(sel, note) {
 
 // ── Note element ───────────────────────────────────────────────────────────────
 
-function createNoteEl(noteData, onUpdate, onDelete, getSelection) {
+function createNoteEl(noteData, onUpdate, onDelete, getSelection, dragOpts = {}) {
   const el = document.createElement('div');
   el.className    = 'note';
   el.style.left   = noteData.x + 'px';
@@ -231,8 +261,8 @@ function createNoteEl(noteData, onUpdate, onDelete, getSelection) {
     setTimeout(() => { el.remove(); onDelete(noteData.id); }, 150);
   });
 
-  makeDraggable(el, noteData, onUpdate, getSelection);
-  watchResize(el, noteData, onUpdate);
+  makeDraggable(el, noteData, onUpdate, getSelection, dragOpts);
+  watchResize(el, noteData, onUpdate, dragOpts.onDragMove);
   return el;
 }
 
@@ -266,6 +296,7 @@ export function mountNotesView(container) {
       <button class="notes-btn" id="notes-reset-view" title="Réinitialiser la position de la vue">⌖ VUE</button>
       <button class="notes-btn" id="notes-export">EXPORTER TOUT</button>
       <button class="notes-btn" id="notes-import">IMPORTER</button>
+      <button class="notes-btn" id="notes-help-btn">? AIDE</button>
       <span class="notes-sel-bar" id="notes-sel-bar">
         <span class="notes-sel-info" id="notes-sel-info"></span>
         <button class="notes-btn danger" id="notes-sel-delete">SUPPRIMER</button>
@@ -319,7 +350,9 @@ export function mountNotesView(container) {
 
   function clearSelection() {
     selectedIds = new Set();
+    selectedWaypoints = [];
     updateSelectionVisuals();
+    renderConnections();
   }
 
   // ── Persistence ────────────────────────────────────────────────────────────────
@@ -348,6 +381,368 @@ export function mountNotesView(container) {
     })).filter(({ noteData, noteEl }) => noteData && noteEl);
   }
 
+  // ── Connection state ────────────────────────────────────────────────────────
+
+  let svgEl = null;
+  let connPathMap = new Map();       // connId → { visible, hit, waypoints: [circle] }
+  let selectedConnId = null;
+  let selectedWaypoints = [];        // [{connId, wpIdx}]
+  let connectMode = false;
+  let clipboard = null;              // {notes, connections} for Ctrl+C/V
+
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  function createSvgLayer() {
+    svgEl = document.createElementNS(SVG_NS, 'svg');
+    svgEl.classList.add('connections-svg');
+    svgEl.setAttribute('width', '100%');
+    svgEl.setAttribute('height', '100%');
+    svgEl.style.cssText = 'position:absolute;top:0;left:0;overflow:visible;pointer-events:none;';
+    // Glow filter
+    const defs = document.createElementNS(SVG_NS, 'defs');
+    defs.innerHTML = `<filter id="conn-glow"><feGaussianBlur stdDeviation="2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+    svgEl.appendChild(defs);
+    return svgEl;
+  }
+
+  function buildPathD(conn, page) {
+    const from = page.notes.find(n => n.id === conn.fromId);
+    const to   = page.notes.find(n => n.id === conn.toId);
+    if (!from || !to) return null;
+    const pts = [
+      { x: from.x + from.w / 2, y: from.y + from.h / 2 },
+      ...conn.waypoints,
+      { x: to.x + to.w / 2, y: to.y + to.h / 2 },
+    ];
+    return 'M ' + pts.map(p => `${p.x},${p.y}`).join(' L ');
+  }
+
+  function renderConnections() {
+    if (!svgEl) return;
+    // Remove old paths
+    connPathMap.forEach(({ visible, hit, wpCircles }) => {
+      visible.remove();
+      hit.remove();
+      wpCircles.forEach(c => c.remove());
+    });
+    connPathMap.clear();
+
+    const page = activePage();
+    page.connections.forEach(conn => {
+      const d = buildPathD(conn, page);
+      if (!d) return;
+      const color = resolveConnColor(conn.color);
+
+      // Visible path
+      const vis = document.createElementNS(SVG_NS, 'path');
+      vis.setAttribute('d', d);
+      vis.setAttribute('stroke', color);
+      vis.setAttribute('stroke-width', '1.5');
+      vis.setAttribute('fill', 'none');
+      vis.setAttribute('filter', 'url(#conn-glow)');
+      vis.setAttribute('opacity', '0.7');
+      vis.dataset.connId = conn.id;
+      if (conn.id === selectedConnId) {
+        vis.setAttribute('stroke-width', '2.5');
+        vis.setAttribute('opacity', '1');
+      }
+      svgEl.appendChild(vis);
+
+      // Invisible hit area
+      const hit = document.createElementNS(SVG_NS, 'path');
+      hit.setAttribute('d', d);
+      hit.setAttribute('stroke', 'transparent');
+      hit.setAttribute('stroke-width', '14');
+      hit.setAttribute('fill', 'none');
+      hit.setAttribute('opacity', '0');
+      hit.style.pointerEvents = 'stroke';
+      hit.style.cursor = 'pointer';
+      hit.dataset.connId = conn.id;
+      svgEl.appendChild(hit);
+
+      // Event handlers on hit area
+      hit.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); showConnContextMenu(conn, e); });
+      hit.addEventListener('dblclick', (e) => { e.stopPropagation(); addWaypoint(conn, e); });
+      hit.addEventListener('click', (e) => { e.stopPropagation(); selectConnection(conn.id); });
+
+      // Waypoint circles
+      const wpCircles = conn.waypoints.map((wp, idx) => {
+        const isSelected = selectedWaypoints.some(sw => sw.connId === conn.id && sw.wpIdx === idx);
+        const circle = document.createElementNS(SVG_NS, 'circle');
+        circle.setAttribute('cx', wp.x);
+        circle.setAttribute('cy', wp.y);
+        circle.setAttribute('r', isSelected ? '7' : '5');
+        circle.setAttribute('fill', isSelected ? 'var(--color-accent)' : 'var(--color-bg-surface)');
+        circle.setAttribute('stroke', color);
+        circle.setAttribute('stroke-width', isSelected ? '2' : '1.5');
+        circle.setAttribute('filter', 'url(#conn-glow)');
+        circle.style.pointerEvents = 'auto';
+        circle.style.cursor = 'grab';
+        svgEl.appendChild(circle);
+
+        circle.addEventListener('mousedown', (e) => {
+          if (e.button === 2) return; // let context menu through
+          e.preventDefault();
+          e.stopPropagation();
+          startWaypointDrag(conn, idx, wp, e);
+        });
+        circle.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          showWaypointContextMenu(conn, idx, e);
+        });
+
+        return circle;
+      });
+
+      connPathMap.set(conn.id, { visible: vis, hit, wpCircles });
+    });
+  }
+
+  function updateConnectionPaths() {
+    const page = activePage();
+    page.connections.forEach(conn => {
+      const entry = connPathMap.get(conn.id);
+      if (!entry) return;
+      const d = buildPathD(conn, page);
+      if (!d) return;
+      entry.visible.setAttribute('d', d);
+      entry.hit.setAttribute('d', d);
+      // Update waypoint positions
+      conn.waypoints.forEach((wp, i) => {
+        if (entry.wpCircles[i]) {
+          entry.wpCircles[i].setAttribute('cx', wp.x);
+          entry.wpCircles[i].setAttribute('cy', wp.y);
+        }
+      });
+    });
+  }
+
+  function selectConnection(connId) {
+    selectedConnId = connId === selectedConnId ? null : connId;
+    renderConnections();
+  }
+
+  function deselectConnection() {
+    if (selectedConnId) { selectedConnId = null; renderConnections(); }
+  }
+
+  // ── Connection creation (Shift+drag from note header) ─────────────────────
+
+  function startConnectionDraw(fromId, e) {
+    const page = activePage();
+    const fromNote = page.notes.find(n => n.id === fromId);
+    if (!fromNote) return;
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const fx = fromNote.x + fromNote.w / 2;
+    const fy = fromNote.y + fromNote.h / 2;
+
+    const tempLine = document.createElementNS(SVG_NS, 'line');
+    tempLine.setAttribute('x1', fx);
+    tempLine.setAttribute('y1', fy);
+    tempLine.setAttribute('x2', fx);
+    tempLine.setAttribute('y2', fy);
+    tempLine.setAttribute('stroke', 'var(--color-accent)');
+    tempLine.setAttribute('stroke-width', '1.5');
+    tempLine.setAttribute('stroke-dasharray', '6,4');
+    tempLine.setAttribute('opacity', '0.6');
+    tempLine.setAttribute('filter', 'url(#conn-glow)');
+    tempLine.style.pointerEvents = 'none';
+    svgEl.appendChild(tempLine);
+
+    function onMove(ev) {
+      const wx = ev.clientX - canvasRect.left - page.panX;
+      const wy = ev.clientY - canvasRect.top - page.panY;
+      tempLine.setAttribute('x2', wx);
+      tempLine.setAttribute('y2', wy);
+    }
+    function onUp(ev) {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      tempLine.remove();
+
+      // Find target note under cursor
+      const elUnder = document.elementFromPoint(ev.clientX, ev.clientY);
+      const noteEl = elUnder?.closest?.('.note');
+      const toId = noteEl?.dataset?.id;
+
+      if (toId && toId !== fromId) {
+        // Check no duplicate
+        const exists = page.connections.some(c =>
+          (c.fromId === fromId && c.toId === toId) || (c.fromId === toId && c.toId === fromId)
+        );
+        if (!exists) {
+          page.connections.push(makeConnection(fromId, toId));
+          soundManager.playConfirm();
+          persist();
+          renderConnections();
+          return;
+        }
+      }
+      soundManager.playBack();
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  // ── Waypoints ─────────────────────────────────────────────────────────────
+
+  function addWaypoint(conn, e) {
+    const page = activePage();
+    const canvasRect = canvas.getBoundingClientRect();
+    const wx = e.clientX - canvasRect.left - page.panX;
+    const wy = e.clientY - canvasRect.top  - page.panY;
+
+    // Find which segment is closest to insert the waypoint
+    const from = page.notes.find(n => n.id === conn.fromId);
+    const to   = page.notes.find(n => n.id === conn.toId);
+    if (!from || !to) return;
+
+    const pts = [
+      { x: from.x + from.w / 2, y: from.y + from.h / 2 },
+      ...conn.waypoints,
+      { x: to.x + to.w / 2, y: to.y + to.h / 2 },
+    ];
+
+    let bestIdx = 0, bestDist = Infinity;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const d = distToSegment(wx, wy, pts[i], pts[i + 1]);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+
+    conn.waypoints.splice(bestIdx, 0, { x: wx, y: wy });
+    soundManager.playConfirm();
+    persist();
+    renderConnections();
+  }
+
+  function distToSegment(px, py, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.hypot(px - a.x, py - a.y);
+    let t = ((px - a.x) * dx + (py - a.y) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (a.x + t * dx), py - (a.y + t * dy));
+  }
+
+  function startWaypointDrag(conn, wpIdx, wp, e) {
+    const canvasRect = canvas.getBoundingClientRect();
+    const page = activePage();
+
+    function onMove(ev) {
+      wp.x = ev.clientX - canvasRect.left - page.panX;
+      wp.y = ev.clientY - canvasRect.top  - page.panY;
+      updateConnectionPaths();
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      persist();
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+
+  // ── Context menus ─────────────────────────────────────────────────────────
+
+  let ctxMenu = null;
+
+  function closeContextMenu() {
+    if (ctxMenu) { ctxMenu.remove(); ctxMenu = null; }
+  }
+
+  function showConnContextMenu(conn, e) {
+    closeContextMenu();
+    ctxMenu = document.createElement('div');
+    ctxMenu.className = 'conn-context-menu';
+    ctxMenu.style.left = e.clientX + 'px';
+    ctxMenu.style.top  = e.clientY + 'px';
+    ctxMenu.innerHTML = `
+      <div class="conn-context-item" data-action="delete">SUPPRIMER</div>
+      <div class="conn-context-sep"></div>
+      <div class="conn-color-row">
+        <span class="conn-color-swatch ${!conn.color || conn.color === 'default' ? 'active' : ''}" data-color="default" title="Accent" style="background:var(--color-accent)"></span>
+        <span class="conn-color-swatch ${conn.color === 'red' ? 'active' : ''}" data-color="red" title="Rouge" style="background:#ff4444"></span>
+        <span class="conn-color-swatch ${conn.color === 'amber' ? 'active' : ''}" data-color="amber" title="Ambre" style="background:#ffaa00"></span>
+        <span class="conn-color-swatch ${conn.color === 'blue' ? 'active' : ''}" data-color="blue" title="Bleu" style="background:#4488ff"></span>
+        <span class="conn-color-swatch ${conn.color === 'dim' ? 'active' : ''}" data-color="dim" title="Discret" style="background:var(--color-text-dim)"></span>
+      </div>
+    `;
+    document.body.appendChild(ctxMenu);
+
+    ctxMenu.querySelector('[data-action="delete"]').addEventListener('click', () => {
+      const page = activePage();
+      page.connections = page.connections.filter(c => c.id !== conn.id);
+      if (selectedConnId === conn.id) selectedConnId = null;
+      soundManager.playBack();
+      persist();
+      renderConnections();
+      closeContextMenu();
+    });
+
+    ctxMenu.querySelectorAll('.conn-color-swatch').forEach(sw => {
+      sw.addEventListener('click', () => {
+        const c = sw.dataset.color;
+        conn.color = c === 'default' ? null : c;
+        soundManager.playToggle(true);
+        persist();
+        renderConnections();
+        closeContextMenu();
+      });
+    });
+
+    setTimeout(() => {
+      document.addEventListener('click', closeContextMenu, { once: true });
+    }, 0);
+  }
+
+  function showWaypointContextMenu(conn, wpIdx, e) {
+    closeContextMenu();
+    ctxMenu = document.createElement('div');
+    ctxMenu.className = 'conn-context-menu';
+    ctxMenu.style.left = e.clientX + 'px';
+    ctxMenu.style.top  = e.clientY + 'px';
+    ctxMenu.innerHTML = `<div class="conn-context-item" data-action="delete">SUPPRIMER LE POINT</div>`;
+    document.body.appendChild(ctxMenu);
+
+    ctxMenu.querySelector('[data-action="delete"]').addEventListener('click', () => {
+      conn.waypoints.splice(wpIdx, 1);
+      soundManager.playBack();
+      persist();
+      renderConnections();
+      closeContextMenu();
+    });
+
+    setTimeout(() => {
+      document.addEventListener('click', closeContextMenu, { once: true });
+    }, 0);
+  }
+
+  // ── Connect mode indicator ────────────────────────────────────────────────
+
+  function updateConnectModeIndicator() {
+    const existing = view.querySelector('.connect-mode-indicator');
+    if (connectMode && !existing) {
+      const ind = document.createElement('span');
+      ind.className = 'connect-mode-indicator';
+      ind.textContent = '⚡ CONNEXION';
+      view.querySelector('.notes-toolbar').appendChild(ind);
+    } else if (!connectMode && existing) {
+      existing.remove();
+    }
+  }
+
+  // ── Drag opts for notes ───────────────────────────────────────────────────
+
+  const connStart = (noteId, e) => startConnectionDraw(noteId, e);
+  connStart.shouldConnect = (e) => e.shiftKey || connectMode;
+
+  const dragOpts = {
+    onDragMove: () => updateConnectionPaths(),
+    onConnStart: connStart,
+  };
+
   function addNote(noteData) {
     const page = activePage();
     const el = createNoteEl(
@@ -355,11 +750,14 @@ export function mountNotesView(container) {
       persist,
       (id) => {
         page.notes = page.notes.filter(n => n.id !== id);
+        page.connections = page.connections.filter(c => c.fromId !== id && c.toId !== id);
         selectedIds.delete(id);
         updateSelectionVisuals();
         persist();
+        renderConnections();
       },
-      getSelection
+      getSelection,
+      dragOpts
     );
     world.appendChild(el);
     bringToFront(el);
@@ -368,6 +766,8 @@ export function mountNotesView(container) {
   function renderPage() {
     world.innerHTML = '';
     selectedIds     = new Set();
+    selectedConnId  = null;
+    connPathMap.clear();
     updateSelectionVisuals();
     // First time this page is displayed: centre the origin in the viewport.
     const page = activePage();
@@ -380,7 +780,10 @@ export function mountNotesView(container) {
     const originMarker = document.createElement('div');
     originMarker.className = 'canvas-center-marker';
     world.appendChild(originMarker);
+    // SVG layer for connections (behind notes)
+    world.appendChild(createSvgLayer());
     activePage().notes.forEach(addNote);
+    renderConnections();
     updateCount();
     renderPageTabs();
   }
@@ -490,7 +893,7 @@ export function mountNotesView(container) {
   // ── Deselect on click on canvas background ────────────────────────────────────
 
   canvas.addEventListener('pointerdown', (e) => {
-    if (e.button === 0 && e.target === canvas) clearSelection();
+    if (e.button === 0 && e.target === canvas) { clearSelection(); deselectConnection(); closeContextMenu(); }
   });
 
   // ── Rubber-band selection (left click on canvas background) ────────────────────
@@ -529,7 +932,17 @@ export function mountNotesView(container) {
       page.notes.forEach(note => {
         if (rectsOverlap({ x, y, w, h }, note)) selectedIds.add(note.id);
       });
+      // Select waypoints inside rubber-band
+      selectedWaypoints = [];
+      page.connections.forEach(conn => {
+        conn.waypoints.forEach((wp, wpIdx) => {
+          if (wp.x >= x && wp.x <= x + w && wp.y >= y && wp.y <= y + h) {
+            selectedWaypoints.push({ connId: conn.id, wpIdx });
+          }
+        });
+      });
       updateSelectionVisuals();
+      renderConnections();
     }
     function onUp() {
       document.removeEventListener('mousemove', onMove);
@@ -614,9 +1027,11 @@ export function mountNotesView(container) {
     });
     const page = activePage();
     page.notes = page.notes.filter(n => !selectedIds.has(n.id));
+    page.connections = page.connections.filter(c => !selectedIds.has(c.fromId) && !selectedIds.has(c.toId));
     selectedIds = new Set();
     persist();
     updateSelectionVisuals();
+    renderConnections();
     showFeedback(view, `${count} note(s) supprimée(s)`);
   }
 
@@ -630,33 +1045,152 @@ export function mountNotesView(container) {
   });
 
   view.querySelector('#notes-sel-clear').addEventListener('click', clearSelection);
+  view.querySelector('#notes-help-btn').addEventListener('click', toggleHelp);
 
   // ── Focus manager ──────────────────────────────────────────────────────────────
+
+  // ── Help panel ───────────────────────────────────────────────────────────
+
+  let helpVisible = false;
+
+  function toggleHelp() {
+    helpVisible = !helpVisible;
+    const existing = view.querySelector('.notes-help-panel');
+    if (existing) { existing.remove(); helpVisible = false; return; }
+    const panel = document.createElement('div');
+    panel.className = 'notes-help-panel';
+    panel.innerHTML = `
+      <div class="notes-help-title">RACCOURCIS</div>
+      <div class="notes-help-row"><kbd>Shift + Drag</kbd> Connecter deux notes</div>
+      <div class="notes-help-row"><kbd>C</kbd> Mode connexion (toggle)</div>
+      <div class="notes-help-row"><kbd>Dbl-clic ligne</kbd> Ajouter un point</div>
+      <div class="notes-help-row"><kbd>Clic droit ligne</kbd> Supprimer / Couleur</div>
+      <div class="notes-help-row"><kbd>Sélection rect.</kbd> Sélectionne notes + points</div>
+      <div class="notes-help-row"><kbd>Ctrl + C</kbd> Copier la sélection</div>
+      <div class="notes-help-row"><kbd>Ctrl + V</kbd> Coller</div>
+      <div class="notes-help-row"><kbd>Suppr</kbd> Supprimer sélection</div>
+      <div class="notes-help-row"><kbd>Esc</kbd> Désélectionner / Quitter</div>
+      <div class="notes-help-row"><kbd>Clic droit canvas</kbd> Déplacer la vue</div>
+      <div class="notes-help-row"><kbd>?</kbd> Afficher / masquer l'aide</div>
+    `;
+    view.querySelector('.notes-canvas').appendChild(panel);
+    helpVisible = true;
+  }
 
   const component = {
     id: 'notes',
     handleKeydown(e) {
+      const inTextarea = document.activeElement?.tagName === 'TEXTAREA';
+
       if (e.key === 'Escape') {
-        if (selectedIds.size > 0) {
-          e.preventDefault();
-          clearSelection();
-          return true;
-        }
-        if (document.activeElement?.tagName === 'TEXTAREA') {
-          e.preventDefault();
-          document.activeElement.blur();
-          return true;
-        }
+        closeContextMenu();
+        if (connectMode) { connectMode = false; updateConnectModeIndicator(); return true; }
+        if (selectedConnId) { e.preventDefault(); deselectConnection(); return true; }
+        if (selectedIds.size > 0) { e.preventDefault(); clearSelection(); return true; }
+        if (helpVisible) { toggleHelp(); return true; }
+        if (inTextarea) { e.preventDefault(); document.activeElement.blur(); return true; }
         e.preventDefault();
         soundManager.playBack();
         router.pop();
         return true;
       }
-      if (selectedIds.size > 0 && document.activeElement?.tagName !== 'TEXTAREA') {
-        if (e.key === 'Delete' || e.key === 'Backspace') {
+
+      if (!inTextarea) {
+        if (e.key === '?' || e.key === 'F1') {
           e.preventDefault();
-          deleteSelected();
+          toggleHelp();
           return true;
+        }
+        if (e.key === 'c' || e.key === 'C') {
+          e.preventDefault();
+          connectMode = !connectMode;
+          soundManager.playToggle(connectMode);
+          updateConnectModeIndicator();
+          return true;
+        }
+        // Ctrl+C — copy selected notes (+ internal connections)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+          if (selectedIds.size > 0) {
+            e.preventDefault();
+            const page = activePage();
+            const copiedNotes = page.notes.filter(n => selectedIds.has(n.id)).map(n => ({ ...n }));
+            const copiedConns = page.connections
+              .filter(c => selectedIds.has(c.fromId) && selectedIds.has(c.toId))
+              .map(c => ({ ...c, waypoints: c.waypoints.map(wp => ({ ...wp })) }));
+            clipboard = { notes: copiedNotes, connections: copiedConns };
+            soundManager.playConfirm();
+            showFeedback(view, `${copiedNotes.length} note(s) copiée(s)`);
+            return true;
+          }
+        }
+        // Ctrl+V — paste
+        if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+          if (clipboard && clipboard.notes.length > 0) {
+            e.preventDefault();
+            const page = activePage();
+            const idMap = new Map(); // old id → new id
+            const offset = 30;
+            const newNotes = clipboard.notes.map(n => {
+              const newId = crypto.randomUUID();
+              idMap.set(n.id, newId);
+              return { ...n, id: newId, x: n.x + offset, y: n.y + offset };
+            });
+            const newConns = clipboard.connections.map(c => ({
+              ...c,
+              id: crypto.randomUUID(),
+              fromId: idMap.get(c.fromId),
+              toId: idMap.get(c.toId),
+              waypoints: c.waypoints.map(wp => ({ x: wp.x + offset, y: wp.y + offset })),
+            })).filter(c => c.fromId && c.toId);
+            page.notes.push(...newNotes);
+            page.connections.push(...newConns);
+            // Select pasted notes
+            selectedIds = new Set(newNotes.map(n => n.id));
+            persist();
+            newNotes.forEach(addNote);
+            renderConnections();
+            updateSelectionVisuals();
+            soundManager.playConfirm();
+            showFeedback(view, `${newNotes.length} note(s) collée(s)`);
+            return true;
+          }
+        }
+        if (e.key === 'Delete' || e.key === 'Backspace') {
+          if (selectedWaypoints.length > 0) {
+            e.preventDefault();
+            const page = activePage();
+            // Remove waypoints in reverse index order to keep indices valid
+            const byConn = new Map();
+            selectedWaypoints.forEach(({ connId, wpIdx }) => {
+              if (!byConn.has(connId)) byConn.set(connId, []);
+              byConn.get(connId).push(wpIdx);
+            });
+            byConn.forEach((indices, connId) => {
+              const conn = page.connections.find(c => c.id === connId);
+              if (!conn) return;
+              indices.sort((a, b) => b - a).forEach(i => conn.waypoints.splice(i, 1));
+            });
+            selectedWaypoints = [];
+            soundManager.playBack();
+            persist();
+            renderConnections();
+            return true;
+          }
+          if (selectedConnId) {
+            e.preventDefault();
+            const page = activePage();
+            page.connections = page.connections.filter(c => c.id !== selectedConnId);
+            selectedConnId = null;
+            soundManager.playBack();
+            persist();
+            renderConnections();
+            return true;
+          }
+          if (selectedIds.size > 0) {
+            e.preventDefault();
+            deleteSelected();
+            return true;
+          }
         }
       }
       return false;
