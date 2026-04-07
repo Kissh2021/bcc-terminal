@@ -165,6 +165,14 @@ export const soundManager = {
     setTimeout(() => playTone({ frequency: 440, duration: 0.08, volume: 0.07, type: 'square' }), 50);
   },
 
+  // ── Boot logo ─────────────────────────────────────────────────────────────
+  /** Flash électrique synchronisé avec le clignotement du logo au démarrage */
+  playLogoBlink() {
+    // Coup bref basse fréquence + déclin grave = sensation d'allumage CRT
+    playTone({ frequency: 110, duration: 0.06, volume: 0.18, type: 'sawtooth', decay: 0.10 });
+    setTimeout(() => playTone({ frequency: 55, duration: 0.25, volume: 0.09, type: 'sine', decay: 0.28 }), 25);
+  },
+
   // ── Chargement distant ────────────────────────────────────────────────────
   /** Tick de scan — appelé en boucle pendant un fetch GitHub */
   playLoadTick() {

@@ -42,9 +42,20 @@ async function waitForClick(bootEl) {
 
   if (logoSrc) {
     bootEl.innerHTML = `
-      <img class="boot-logo-img" src="${logoSrc}" alt="BCC Logo" draggable="false" />
+      <div class="boot-logo-wrapper">
+        <img class="boot-logo-img" src="${logoSrc}" alt="BCC Logo" draggable="false" />
+      </div>
       <div class="boot-logo-hint">CLIQUER POUR DÉMARRER</div>
     `;
+
+    // Son synchronisé avec le clignotement — période 1.6s, logo visible à 6% (≈ 96ms)
+    const blinkInterval = setInterval(
+      () => soundManager.playLogoBlink(),
+      1600
+    );
+    setTimeout(() => soundManager.playLogoBlink(), 96); // premier blink
+
+    bootEl.addEventListener('click', () => clearInterval(blinkInterval), { once: true });
   } else {
     bootEl.innerHTML = `<div class="boot-start-symbol">\u25c8</div>`;
   }

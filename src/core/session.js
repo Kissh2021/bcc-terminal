@@ -1,36 +1,31 @@
+import { invoke } from '@tauri-apps/api/core';
 import { storage } from '../utils/storage.js';
-import { users } from '../data/users.js';
 
 let currentUser = null;
 
-async function hashPassword(password) {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(password);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-}
+// ── Session ────────────────────────────────────────────────────────────────
 
 export const session = {
   async login(username, password) {
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-    if (!user) return { success: false, error: 'UTILISATEUR INCONNU' };
+    try {
+      // invoke() appelle la commande Rust login()
+      // Retourne { id, username, group } ou rejette avec une string d'erreur
+      const user = await invoke('login', { username, password });
+      currentUser = user;
+      storage.set('session', { id: user.id, username: user.username, group: user.group });
 
-    const hash = await hashPassword(password);
-    if (hash !== user.passwordHash) return { success: false, error: 'MOT DE PASSE INCORRECT' };
+      // Mémorisation du compte (sans mot de passe)
+      const accounts = storage.get('accounts', []);
+      if (!accounts.find(a => a.username === user.username)) {
+        accounts.push({ username: user.username, group: user.group });
+        storage.set('accounts', accounts);
+      }
 
-    currentUser = { id: user.id, username: user.username, group: user.group };
-    storage.set('session', currentUser);
-
-    // Add to saved accounts list
-    const accounts = storage.get('accounts', []);
-    const exists = accounts.find(a => a.username === user.username);
-    if (!exists) {
-      accounts.push({ username: user.username, group: user.group });
-      storage.set('accounts', accounts);
+      return { success: true, user: currentUser };
+    } catch (err) {
+      // Rust retourne Err(String) → invoke() rejette avec la string directement
+      return { success: false, error: typeof err === 'string' ? err : (err.message ?? 'ERREUR INCONNUE') };
     }
-
-    return { success: true, user: currentUser };
   },
 
   logout() {
@@ -38,19 +33,20 @@ export const session = {
     storage.remove('session');
   },
 
-  restore() {
+  async restore() {
     const saved = storage.get('session');
-    if (saved) {
-      // Verify the user still exists
-      const exists = users.find(u => u.id === saved.id);
-      if (exists) {
-        currentUser = saved;
-        return currentUser;
-      } else {
-        storage.remove('session');
-      }
+    if (!saved?.id) return null;
+
+    try {
+      // Re-vérifie que l'utilisateur existe toujours dans _users.json
+      const user = await invoke('restore_session', { userId: saved.id });
+      currentUser = user;
+      return currentUser;
+    } catch {
+      // Utilisateur supprimé ou réseau indisponible — on efface la session
+      storage.remove('session');
+      return null;
     }
-    return null;
   },
 
   currentUser() {
@@ -63,23 +59,19 @@ export const session = {
 
   hasGroup(group) {
     if (!currentUser) return false;
-    // Group hierarchy: admin > directeur > agent > public
     const hierarchy = ['public', 'agent', 'directeur', 'admin'];
-    const userLevel = hierarchy.indexOf(currentUser.group);
+    const userLevel     = hierarchy.indexOf(currentUser.group);
     const requiredLevel = hierarchy.indexOf(group);
     return userLevel >= requiredLevel;
   },
 
   hasAccessToNode(node) {
-    // null means public
     if (!node.allowedGroups && !node.allowedUsers) return true;
 
-    // Check by userId first
     if (node.allowedUsers && currentUser) {
       if (node.allowedUsers.includes(currentUser.id)) return true;
     }
 
-    // Check by group
     if (node.allowedGroups) {
       if (!currentUser) return false;
       return node.allowedGroups.some(g => this.hasGroup(g));

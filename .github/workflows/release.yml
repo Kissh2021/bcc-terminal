@@ -1,0 +1,56 @@
+name: Build and Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*'   # Déclenché sur les tags de version : v0.1.0, v1.0.0, etc.
+
+permissions:
+  contents: write   # Nécessaire pour créer la release GitHub
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build and release Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN:                  ${{ secrets.GITHUB_TOKEN }}
+          # Token readonly GitHub embarqué dans le binaire Rust via env!()
+          # Le secret GitHub s'appelle VITE_GITHUB_READONLY_TOKEN (partagé avec l'ancien workflow web)
+          GITHUB_READONLY_TOKEN:         ${{ secrets.VITE_GITHUB_READONLY_TOKEN }}
+          # Clé de signature pour l'auto-updater
+          # Générer avec : npm run tauri -- signer generate -w ~/.tauri/bcc.key
+          TAURI_SIGNING_PRIVATE_KEY:          ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          tagName:      ${{ github.ref_name }}
+          releaseName:  'BCC Terminal ${{ github.ref_name }}'
+          releaseBody:  'Application desktop BCC Terminal pour Windows.'
+          releaseDraft: false
+          prerelease:   false
+          # Génère latest.json (manifeste de mise à jour) automatiquement
+          includeUpdaterJson: true
