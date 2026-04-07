@@ -9,7 +9,10 @@
       "Bash(find /c/DEV/bcc-terminal/src -type f -name *cat* -o -name *open*)",
       "Bash(del \"C:\\\\DEV\\\\bcc-terminal\\\\src\\\\data\\\\users.js\")",
       "Bash(npm audit:*)",
-      "Bash(cargo --version)"
+      "Bash(cargo --version)",
+      "Bash(gh release:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:release-assets.githubusercontent.com)"
     ]
   }
 }
