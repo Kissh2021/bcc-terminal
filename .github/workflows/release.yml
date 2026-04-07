@@ -67,5 +67,41 @@ jobs:
           releaseBody:  'Application desktop BCC Terminal pour Windows.'
           releaseDraft: false
           prerelease:   false
-          # Génère latest.json (manifeste de mise à jour) automatiquement
-          includeUpdaterJson: true
+
+      - name: Generate and upload latest.json
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = "${{ github.ref_name }}" -replace '^v', ''
+          $tag     = "${{ github.ref_name }}"
+
+          # Cherche le .nsis.zip et son .sig dans le dossier bundle
+          $zipFile = Get-ChildItem -Recurse -Path "src-tauri/target" -Filter "*.nsis.zip"    | Select-Object -First 1
+          $sigFile = Get-ChildItem -Recurse -Path "src-tauri/target" -Filter "*.nsis.zip.sig" | Select-Object -First 1
+
+          if (-not $zipFile) { Write-Error "Fichier .nsis.zip introuvable"; exit 1 }
+          if (-not $sigFile) { Write-Error "Fichier .nsis.zip.sig introuvable — clé de signature manquante ?"; exit 1 }
+
+          $signature   = (Get-Content $sigFile.FullName -Raw).Trim()
+          $downloadUrl = "https://github.com/kissh2021/bcc-terminal/releases/download/$tag/$($zipFile.Name)"
+          $pubDate     = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+
+          $payload = [ordered]@{
+            version  = $version
+            notes    = "BCC Terminal $tag"
+            pub_date = $pubDate
+            platforms = [ordered]@{
+              "windows-x86_64" = [ordered]@{
+                signature = $signature
+                url       = $downloadUrl
+              }
+            }
+          }
+
+          $payload | ConvertTo-Json -Depth 5 | Out-File -FilePath "latest.json" -Encoding utf8NoBOM
+          Write-Host "latest.json généré :"
+          Get-Content "latest.json"
+
+          gh release upload $tag latest.json --clobber
+
