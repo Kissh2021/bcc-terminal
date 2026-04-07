@@ -17,14 +17,9 @@ import { invoke } from '@tauri-apps/api/core';
  * @returns {Promise<import('@tauri-apps/plugin-updater').Update | null>}
  */
 export async function checkUpdate() {
-  try {
-    const update = await check();
-    console.info('[updater] check →', update?.available ? `v${update.version} disponible` : 'aucune MAJ');
-    return update?.available ? update : null;
-  } catch (err) {
-    console.warn('[updater] erreur check :', err);
-    return null;
-  }
+  const update = await check(); // laisse l'erreur remonter à l'appelant
+  console.info('[updater] check →', update?.available ? `v${update.version} disponible` : 'aucune MAJ');
+  return update?.available ? update : null;
 }
 
 /**

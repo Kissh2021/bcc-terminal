@@ -1,10 +1,13 @@
 import { session } from '../core/session.js';
 import { router } from '../core/router.js';
 import { soundManager } from '../core/soundManager.js';
+import { getVersion } from '@tauri-apps/api/app';
 
 let clockInterval = null;
+let appVersion = '';
 
 export function mountHeader(el) {
+  getVersion().then(v => { appVersion = v; render(el); }).catch(() => {});
   render(el);
 
   document.addEventListener('bcc:session-changed', () => render(el));
@@ -29,7 +32,7 @@ function render(el) {
 
   el.innerHTML = `
     ${buildNavButtons(view)}
-    <span class="header-logo">BCC <span>///</span> TERMINAL</span>
+    <span class="header-logo">BCC <span>///</span> TERMINAL${appVersion ? `<span class="header-version">v${appVersion}</span>` : ''}</span>
     <div class="header-sep"></div>
     ${user
       ? `<div class="header-user">

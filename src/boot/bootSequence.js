@@ -33,7 +33,7 @@ export async function showSplashScreen() {
   document.body.appendChild(overlay);
 
   // Lancer le check MAJ en parallèle du chargement du logo
-  const updatePromise = checkUpdate();
+  const updatePromise = checkUpdate().catch(err => { console.warn('[updater]', err); return null; });
 
   const logoSrc = await tryLoadLogo();
 

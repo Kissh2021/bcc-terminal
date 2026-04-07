@@ -160,7 +160,14 @@ export function mountTerminalBar(el) {
   async function runUpdateCheck() {
     showToast('<span class="start-toast-icon">⟳</span> VÉRIFICATION…');
 
-    const update = await checkUpdate();
+    let update;
+    try {
+      update = await checkUpdate();
+    } catch (err) {
+      showToast(`<span class="start-toast-icon">✗</span> ${err?.message ?? String(err)}`);
+      hideToast(5000);
+      return;
+    }
 
     if (!update) {
       showToast('<span class="start-toast-icon">✓</span> APPLICATION À JOUR');

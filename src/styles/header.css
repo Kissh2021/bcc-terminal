@@ -50,6 +50,13 @@
   letter-spacing: 0.2em;
 }
 
+.header-version {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  opacity: 0.45;
+  margin-left: 6px;
+}
+
 .header-sep {
   flex: 1;
   height: 1px;

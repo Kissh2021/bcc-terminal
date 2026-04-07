@@ -52,7 +52,7 @@ window.__bcc__ = { storage, commandRegistry };
 async function init() {
   // 0. Lancer la vérification de MAJ immédiatement — en parallèle de tout le reste
   //    pour qu'elle soit (presque certainement) résolue quand l'écran titre s'affiche
-  const updatePromise = checkUpdate();
+  const updatePromise = checkUpdate().catch(err => { console.warn('[updater]', err); return null; });
 
   // 1. Restore palette
   const savedPalette = storage.get('palette', 'green');
