@@ -15,20 +15,7 @@ export async function runBootSequence(contentEl, updatePromise = Promise.resolve
 
   await waitForClick(bootEl, updatePromise);
 
-  // Fondu au noir entre l'écran titre et la séquence de boot
-  const veil = document.createElement('div');
-  veil.className = 'boot-veil';
-  document.body.appendChild(veil);
-  await delay(180);
-
   bootEl.innerHTML = '';
-
-  // Dissoudre le voile en parallèle du démarrage du boot
-  delay(60).then(() => {
-    veil.classList.add('boot-veil--out');
-    delay(380).then(() => veil.remove());
-  });
-
   await runFullBoot(bootEl);
 
   await delay(BOOT_TIMING.finalPause);
@@ -98,11 +85,20 @@ export async function showSplashScreen() {
   await new Promise(resolve => {
     overlay.addEventListener('click', () => {
       dismissed = true;
-      overlay.style.opacity = '0';
+      soundManager.playOpen();
+
+      // Fondu au noir puis disparition de l'overlay
+      const veil = document.createElement('div');
+      veil.className = 'boot-veil';
+      document.body.appendChild(veil);
+
       setTimeout(() => {
         overlay.remove();
-        resolve();
-      }, 220);
+        delay(180).then(() => {
+          veil.classList.add('boot-veil--out');
+          delay(380).then(() => { veil.remove(); resolve(); });
+        });
+      }, 180);
     }, { once: true });
   });
 }
@@ -148,6 +144,7 @@ async function waitForClick(bootEl, updatePromise) {
     if (resolved) return;
     resolved = true;
     if (blinkInterval) clearInterval(blinkInterval);
+    soundManager.playOpen();
     bootEl.classList.add('boot-start-out');
     setTimeout(() => {
       bootEl.classList.remove('boot-start', 'boot-start-out');
