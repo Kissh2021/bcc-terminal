@@ -40,7 +40,8 @@ jobs:
         env:
           GITHUB_TOKEN:                  ${{ secrets.GITHUB_TOKEN }}
           # Token readonly GitHub embarqué dans le binaire Rust via env!()
-          GITHUB_READONLY_TOKEN:         ${{ secrets.GITHUB_READONLY_TOKEN }}
+          # Le secret GitHub s'appelle VITE_GITHUB_READONLY_TOKEN (partagé avec l'ancien workflow web)
+          GITHUB_READONLY_TOKEN:         ${{ secrets.VITE_GITHUB_READONLY_TOKEN }}
           # Clé de signature pour l'auto-updater
           # Générer avec : npm run tauri -- signer generate -w ~/.tauri/bcc.key
           TAURI_SIGNING_PRIVATE_KEY:          ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
