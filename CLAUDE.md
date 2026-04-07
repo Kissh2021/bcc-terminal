@@ -168,6 +168,9 @@ avant le handler du terminal, évitant ainsi le double-dispatch ("commande incon
 - **Gestion des comptes** : `src/ui/AccountsView.js` — vue admin (minGroup: 'admin') pour créer/éditer/supprimer des utilisateurs via l'API GitHub admin. Même token admin que pour les documents.
 - `src/utils/githubUsers.js` — CRUD sur `_users.json` (miroir de `githubDocs.js`).
 - **Auto-updater** : `tauri-plugin-updater` + `src/utils/updater.js`. Vérifie les MAJ au démarrage via le manifeste `latest.json` des releases GitHub. Déclencher une release : `git tag v1.x.x && git push --tags`.
+- **Versioning automatique** : le workflow CI lit le tag Git (`v0.1.2` → `0.1.2`) et met à jour `package.json` + `src-tauri/tauri.conf.json` avant le build. Ne jamais modifier la version manuellement dans ces fichiers.
+- **Version courante** : `v0.1.2`.
+- **Workflow Git** : une seule branche `main`. Pas de branche `dev`. On travaille sur `main` et on pousse un tag `v*` quand on veut une release.
 
 ### Tauri — configuration et build
 - `src-tauri/tauri.conf.json` — config fenêtre, bundle NSIS Windows, endpoint updater.
