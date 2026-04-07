@@ -2,6 +2,7 @@ import { session } from '../core/session.js';
 import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
 import { soundManager } from '../core/soundManager.js';
+import { showSplashScreen } from '../boot/bootSequence.js';
 
 const ALL_ITEMS = [
   { key: '1', id: 'documents',  label: 'DOCUMENTS',  desc: 'Archives & rapports',   minGroup: null },
@@ -40,7 +41,7 @@ export function mountMainMenu(container) {
           <span class="menu-item-desc">${item.desc}</span>
         </div>
       `).join('')}
-      <div class="menu-hint">↑↓ NAVIGUER &nbsp;·&nbsp; ENTRÉE SÉLECTIONNER &nbsp;·&nbsp; / TERMINAL</div>
+      <div class="menu-hint">↑↓ NAVIGUER &nbsp;·&nbsp; ENTRÉE SÉLECTIONNER &nbsp;·&nbsp; / TERMINAL &nbsp;·&nbsp; [0] TITRE</div>
     `;
 
     el.querySelectorAll('.menu-item').forEach(item => {
@@ -72,6 +73,10 @@ export function mountMainMenu(container) {
       if (e.key === 'Enter') {
         e.preventDefault();
         navigate(items[focusedIdx].id);
+        return true;
+      }
+      if (e.key === '0') {
+        showSplashScreen();
         return true;
       }
       const num = parseInt(e.key);

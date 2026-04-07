@@ -3,6 +3,7 @@ import { delay } from '../utils/typewriter.js';
 import { BCC_ASCII, BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } from './bootFrames.js';
 import { session } from '../core/session.js';
 import { soundManager } from '../core/soundManager.js';
+import { checkUpdate, performUpdate } from '../utils/updater.js';
 
 export async function runBootSequence(contentEl) {
   const appEl = document.getElementById('app');
@@ -22,6 +23,42 @@ export async function runBootSequence(contentEl) {
   appEl?.classList.remove('boot-active');
 }
 
+/**
+ * Affiche l'écran titre (logo + clic pour fermer) par-dessus l'UI courante.
+ * Appelable depuis le menu principal via la touche [0].
+ */
+export async function showSplashScreen() {
+  const overlay = document.createElement('div');
+  overlay.id = 'splash-overlay';
+  document.body.appendChild(overlay);
+
+  const logoSrc = await tryLoadLogo();
+
+  if (logoSrc) {
+    overlay.innerHTML = `
+      <div class="boot-logo-wrapper">
+        <img class="boot-logo-img" src="${logoSrc}" alt="BCC Logo" draggable="false" />
+      </div>
+      <div class="boot-logo-hint">CLIQUER POUR FERMER</div>
+    `;
+    const blinkInterval = setInterval(() => soundManager.playLogoBlink(), 1600);
+    setTimeout(() => soundManager.playLogoBlink(), 96);
+    overlay.addEventListener('click', () => clearInterval(blinkInterval), { once: true });
+  } else {
+    overlay.innerHTML = `<div class="boot-start-symbol">\u25c8</div>`;
+  }
+
+  await new Promise(resolve => {
+    overlay.addEventListener('click', () => {
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.remove();
+        resolve();
+      }, 220);
+    }, { once: true });
+  });
+}
+
 async function tryLoadLogo() {
   for (const src of ['/logo.svg', '/logo.png', '/logo.webp']) {
     const found = await new Promise(resolve => {
@@ -38,7 +75,12 @@ async function tryLoadLogo() {
 async function waitForClick(bootEl) {
   bootEl.classList.add('boot-start');
 
+  // Lance la vérification des MAJ en arrière-plan (non bloquant)
+  const updatePromise = checkUpdate();
+
   const logoSrc = await tryLoadLogo();
+
+  let blinkInterval = null;
 
   if (logoSrc) {
     bootEl.innerHTML = `
@@ -49,25 +91,59 @@ async function waitForClick(bootEl) {
     `;
 
     // Son synchronisé avec le clignotement — période 1.6s, logo visible à 6% (≈ 96ms)
-    const blinkInterval = setInterval(
-      () => soundManager.playLogoBlink(),
-      1600
-    );
+    blinkInterval = setInterval(() => soundManager.playLogoBlink(), 1600);
     setTimeout(() => soundManager.playLogoBlink(), 96); // premier blink
-
-    bootEl.addEventListener('click', () => clearInterval(blinkInterval), { once: true });
   } else {
     bootEl.innerHTML = `<div class="boot-start-symbol">\u25c8</div>`;
   }
 
+  let resolved = false;
+
+  const doResolve = (resolveFn) => {
+    if (resolved) return;
+    resolved = true;
+    if (blinkInterval) clearInterval(blinkInterval);
+    bootEl.classList.add('boot-start-out');
+    setTimeout(() => {
+      bootEl.classList.remove('boot-start', 'boot-start-out');
+      resolveFn();
+    }, 220);
+  };
+
   return new Promise(resolve => {
-    bootEl.addEventListener('click', () => {
-      bootEl.classList.add('boot-start-out');
-      setTimeout(() => {
-        bootEl.classList.remove('boot-start', 'boot-start-out');
-        resolve();
-      }, 220);
-    }, { once: true });
+    // Clic normal → démarrage du boot
+    bootEl.addEventListener('click', () => doResolve(resolve), { once: true });
+
+    // Quand la vérif MAJ aboutit, afficher le badge si dispo
+    updatePromise.then(update => {
+      if (!update || resolved) return;
+
+      const badge = document.createElement('div');
+      badge.className = 'boot-update-badge';
+      badge.textContent = `⬆ MISE À JOUR v${update.version} DISPONIBLE`;
+      bootEl.appendChild(badge);
+
+      badge.addEventListener('click', async (e) => {
+        e.stopPropagation(); // ne pas déclencher le clic normal
+        if (resolved) return;
+        resolved = true;
+        if (blinkInterval) clearInterval(blinkInterval);
+
+        badge.classList.add('boot-update-installing');
+        badge.textContent = 'TÉLÉCHARGEMENT EN COURS…';
+
+        try {
+          await performUpdate(update, (pct) => {
+            badge.textContent = `INSTALLATION… ${pct}%`;
+          });
+        } catch (err) {
+          // En cas d'erreur, on laisse l'utilisateur continuer
+          badge.textContent = `ERREUR MAJ — ${err?.message ?? err}`;
+          badge.classList.remove('boot-update-installing');
+          resolved = false; // permet de cliquer pour continuer quand même
+        }
+      });
+    });
   });
 }
 

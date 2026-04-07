@@ -170,6 +170,55 @@
   animation: blink 1.5s step-end infinite;
 }
 
+/* ── Overlay écran titre (rappelable depuis le menu) ─────────────────────── */
+
+#splash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: var(--color-bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  cursor: pointer;
+  animation: boot-fade-in 0.4s ease;
+  transition: opacity 0.22s ease;
+}
+
+/* ── Notification de mise à jour sur l'écran titre ───────────────────────── */
+
+.boot-update-badge {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--color-accent);
+  text-shadow:
+    0 0 6px var(--color-glow-strong),
+    0 0 18px var(--color-glow);
+  cursor: pointer;
+  animation: boot-fade-in 0.5s ease;
+  margin-top: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--color-accent);
+  opacity: 0.85;
+  transition: opacity 0.15s ease, text-shadow 0.15s ease;
+}
+
+.boot-update-badge:hover {
+  opacity: 1;
+  text-shadow:
+    0 0 10px var(--color-glow-strong),
+    0 0 30px var(--color-glow),
+    0 0 60px var(--color-glow-faint);
+}
+
+.boot-update-installing {
+  cursor: default;
+  animation: blink 0.6s step-end infinite;
+  opacity: 0.7;
+}
+
 .boot-skip-hint {
   position: absolute;
   bottom: 60px;

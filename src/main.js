@@ -39,6 +39,8 @@ import { mountNotesView }      from './ui/NotesView.js';
 import { mountDocImportView }  from './ui/DocImportView.js';
 import { mountAccountsView }   from './ui/AccountsView.js';
 import { checkForUpdates }     from './utils/updater.js';
+import { getVersion }          from '@tauri-apps/api/app';
+import { getCurrentWindow }    from '@tauri-apps/api/window';
 import { openDocumentViewer, closeDocumentViewer } from './ui/DocumentViewer.js';
 import { filesystem }          from './data/filesystem.js';
 import { injectCustomDocs }    from './utils/customDocs.js';
@@ -103,7 +105,13 @@ async function init() {
   await runBootSequence(contentEl);
   await router.replace('main-menu');
 
-  // 9. Vérifier les mises à jour en arrière-plan (silencieux si pas de MAJ)
+  // 9. Afficher la version dans le titre de la fenêtre
+  try {
+    const version = await getVersion();
+    await getCurrentWindow().setTitle(`BCC Terminal v${version}`);
+  } catch { /* hors contexte Tauri (dev web) — ignoré */ }
+
+  // 10. Vérifier les mises à jour en arrière-plan
   checkForUpdates((text, cssClass) => outputRenderer.printLine(text, cssClass));
 }
 
