@@ -14,7 +14,9 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:release-assets.githubusercontent.com)",
       "Bash(npx vite:*)",
-      "Bash(node -c C:/DEV/bcc-terminal/src/ui/NotesView.js)"
+      "Bash(node -c C:/DEV/bcc-terminal/src/ui/NotesView.js)",
+      "Bash(xargs grep:*)",
+      "Bash(cargo add:*)"
     ]
   }
 }

@@ -80,6 +80,8 @@ avant le handler du terminal, évitant ainsi le double-dispatch ("commande incon
 
 ### Notes — canvas infini (NotesView)
 - **Modèle de données** : `notes-data` → `{ activePageId, pages: [{ id, name, notes, panX, panY }] }`
+  - Chaque note a un tableau `blocks: [{type:'text', value:''}, {type:'image', dataUrl, width, height}, ...]`
+  - Migration automatique : `content` string → `blocks: [{type:'text', value: content}]`
   - Migration automatique depuis l'ancien format `notes` (tableau plat) → PAGE 1.
 - **Canvas world** : un élément `.canvas-world` (`pointer-events: none`) est enfant de `.notes-canvas`.
   Les notes ont `pointer-events: auto` (restauré explicitement). Cela permet :
@@ -112,6 +114,28 @@ avant le handler du terminal, évitant ainsi le double-dispatch ("commande incon
 - **Drag des notes** : formule `noteData.x = e.clientX - startX` — intègre naturellement le pan
   car `startX` capture l'offset viewport au départ du drag.
 - **Pages** : onglets dans la toolbar, add/delete, chaque page a son pan indépendant.
+
+### Notes — images dans les post-its (block-based)
+- **Modèle bloc** : chaque note contient un tableau `blocks[]` au lieu d'un simple `content` string.
+  - Bloc texte : `{ type: 'text', value: '' }` → rendu comme `<textarea>` auto-resize.
+  - Bloc image : `{ type: 'image', dataUrl: 'data:...', width, height }` → rendu comme `<img>` avec resize handle.
+- **Insertion** : bouton `IMG` dans le header de la note OU coller une image depuis le presse-papier (`paste` event).
+  L'image est insérée après le bloc texte focus, un nouveau bloc texte vide est ajouté après.
+- **Resize image** : handle bas-droite avec drag, maintient le ratio d'aspect. Min 50px.
+- **Déplacement** : boutons ↑/↓ (hover) pour réordonner les blocs dans `blocks[]`.
+- **Suppression** : bouton ✕ (hover). Les blocs texte adjacents sont fusionnés (`mergeAdjacentTextBlocks`).
+- **Single-text mode** : quand un seul bloc texte sans image → le textarea reprend `flex: 1` (comportement original).
+- **Helpers** : `readImageFile(file)` → Promise<{dataUrl, width, height}>, `migrateNoteBlocks(note)`, `mergeAdjacentTextBlocks(blocks)`.
+- **Stockage** : images en base64 dans localStorage. Attention à la limite ~5-10MB.
+
+### Notes — export/import .bccnotes
+- **Format** : fichier `.bccnotes` = JSON (version 2) contenant les notes avec images en base64.
+- **Import** : accepte `.bccnotes` ET `.json` (rétrocompat). Les notes v1 (`content` string) sont migrées automatiquement.
+- **Export** : boîte de dialogue Tauri (`@tauri-apps/plugin-dialog` → `save()`) pour choisir l'emplacement.
+  Écriture via `@tauri-apps/plugin-fs` → `writeTextFile()`.
+- **NotesLoader** (`src/ui/NotesLoader.js`) : animation de chargement dédiée (barre à segments + spinner),
+  distincte du GithubLoader. Temps minimum 800ms. Sons dédiés : `playNoteTick()` + `playNoteDone()`.
+- **Plugins Tauri requis** : `tauri-plugin-dialog`, `tauri-plugin-fs` (+ permissions dans `capabilities/default.json`).
 
 ### Notes — pan initial centré
 - `makePage` initialise `panX: null, panY: null` (pas `0`).
@@ -167,6 +191,7 @@ avant le handler du terminal, évitant ainsi le double-dispatch ("commande incon
 - **Stockage client** : `localStorage` clé `bcc_session` → `{ id, username, group }`. Plus de token JWT côté JS.
 - **Gestion des comptes** : `src/ui/AccountsView.js` — vue admin (minGroup: 'admin') pour créer/éditer/supprimer des utilisateurs via l'API GitHub admin. Même token admin que pour les documents.
 - `src/utils/githubUsers.js` — CRUD sur `_users.json` (miroir de `githubDocs.js`).
+- **Persistance fenêtre** : `tauri-plugin-window-state` sauvegarde automatiquement taille/position/maximisé de la fenêtre entre les sessions. Configuré dans `main.rs` + `capabilities/default.json` (`window-state:default`).
 - **Auto-updater** : `tauri-plugin-updater` + `src/utils/updater.js`. Vérifie les MAJ au démarrage via le manifeste `latest.json` des releases GitHub. Déclencher une release : `git tag v1.x.x && git push --tags`.
 - **Versioning automatique** : le workflow CI lit le tag Git (`v0.1.2` → `0.1.2`) et met à jour `package.json` + `src-tauri/tauri.conf.json` avant le build. Ne jamais modifier la version manuellement dans ces fichiers.
 - **Version courante** : `v0.1.2`.

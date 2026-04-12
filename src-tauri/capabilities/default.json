@@ -6,6 +6,9 @@
   "permissions": [
     "core:default",
     "core:window:allow-close",
-    "updater:default"
+    "updater:default",
+    "window-state:default",
+    "dialog:default",
+    "fs:default"
   ]
 }

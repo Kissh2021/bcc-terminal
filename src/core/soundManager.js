@@ -188,6 +188,22 @@ export const soundManager = {
     setTimeout(() => playTone({ frequency: 1100, duration: 0.06, volume: 0.08, type: 'square' }), 80);
   },
 
+  // ── Notes export/import ──────────────────────────────────────────────────
+  /** Tick d'écriture — doux et régulier, comme une écriture sur disque */
+  playNoteTick() {
+    if (!canPlay('nav')) return;
+    const freq = 440 + Math.random() * 80;
+    playTone({ frequency: freq, duration: 0.012, volume: 0.05, type: 'sine', decay: 0.02 });
+  },
+
+  /** Export/import terminé — accord satisfaisant descendant puis montant */
+  playNoteDone() {
+    playTone({ frequency: 523,  duration: 0.05, volume: 0.09, type: 'sine' });
+    setTimeout(() => playTone({ frequency: 659,  duration: 0.05, volume: 0.08, type: 'sine' }), 60);
+    setTimeout(() => playTone({ frequency: 784,  duration: 0.07, volume: 0.10, type: 'sine' }), 120);
+    setTimeout(() => playTone({ frequency: 1047, duration: 0.10, volume: 0.07, type: 'sine', decay: 0.15 }), 200);
+  },
+
   // ── Lifecycle ─────────────────────────────────────────────────────────────
   isEnabled()  { return storage.get('sound', 'on') !== 'off'; },
   setEnabled(b){ storage.set('sound', b ? 'on' : 'off'); },

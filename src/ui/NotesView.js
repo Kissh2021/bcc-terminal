@@ -2,6 +2,8 @@ import { storage } from '../utils/storage.js';
 import { focusManager } from '../core/focusManager.js';
 import { router } from '../core/router.js';
 import { soundManager } from '../core/soundManager.js';
+import { showNotesLoader, updateNotesLoader, hideNotesLoader } from './NotesLoader.js';
+import { save } from '@tauri-apps/plugin-dialog';
 
 // ── Storage ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +30,8 @@ function loadData() {
         p.panY = null;
       }
       p.connections = p.connections ?? [];
+      // Migrate notes from content string → blocks
+      p.notes.forEach(n => migrateNoteBlocks(n));
     });
     return saved;
   }
@@ -52,7 +56,7 @@ function makeConnection(fromId, toId) {
 function makeNote(overrides = {}) {
   return {
     id: crypto.randomUUID(),
-    content: '',
+    blocks: [{ type: 'text', value: '' }],
     x: 60 + Math.random() * 120,
     y: 60 + Math.random() * 80,
     w: 240,
@@ -62,34 +66,92 @@ function makeNote(overrides = {}) {
   };
 }
 
+// ── Block migration & helpers ─────────────────────────────────────────────────
+
+function migrateNoteBlocks(note) {
+  if (!note.blocks) {
+    note.blocks = [{ type: 'text', value: note.content || '' }];
+    delete note.content;
+  }
+}
+
+function mergeAdjacentTextBlocks(blocks) {
+  for (let i = blocks.length - 1; i > 0; i--) {
+    if (blocks[i].type === 'text' && blocks[i - 1].type === 'text') {
+      blocks[i - 1].value += (blocks[i - 1].value && blocks[i].value ? '\n' : '') + blocks[i].value;
+      blocks.splice(i, 1);
+    }
+  }
+}
+
+function readImageFile(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => resolve({ dataUrl: e.target.result, width: img.naturalWidth, height: img.naturalHeight });
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 // ── Export / Import ────────────────────────────────────────────────────────────
 
-function exportNotes(notes) {
-  const json = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), notes }, null, 2);
-  const blob = new Blob([json], { type: 'application/json' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url;
-  a.download = `bcc-notes-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  URL.revokeObjectURL(url);
+const MIN_LOADER_MS = 800;
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function exportNotes(notes) {
+  const defaultName = `bcc-notes-${new Date().toISOString().slice(0, 10)}.bccnotes`;
+
+  // Tauri save dialog — ask where to save
+  const filePath = await save({
+    defaultPath: defaultName,
+    filters: [{ name: 'BCC Notes', extensions: ['bccnotes'] }],
+  });
+  if (!filePath) return null; // user cancelled
+
+  showNotesLoader('EXPORT EN COURS…');
+  updateNotesLoader(`${notes.length} NOTE${notes.length > 1 ? 'S' : ''}…`);
+
+  const json = JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), notes }, null, 2);
+
+  // Write file via Tauri fs + enforce minimum loader time
+  const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+  await Promise.all([writeTextFile(filePath, json), delay(MIN_LOADER_MS)]);
+
+  updateNotesLoader('EXPORT TERMINÉ');
+  hideNotesLoader();
+  return filePath;
 }
 
 function importNotes(onSuccess, onError) {
   const input   = document.createElement('input');
   input.type    = 'file';
-  input.accept  = '.json,application/json';
+  input.accept  = '.json,.bccnotes';
   input.addEventListener('change', () => {
     const file = input.files[0];
     if (!file) return;
+
+    showNotesLoader('IMPORT EN COURS…');
+
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const parsed = JSON.parse(e.target.result);
         const notes  = Array.isArray(parsed) ? parsed : (parsed.notes ?? null);
         if (!Array.isArray(notes)) throw new Error('Format invalide');
-        onSuccess(notes.filter(n => n && typeof n.id === 'string'));
+        // Migrate v1 notes (content string → blocks)
+        notes.forEach(n => migrateNoteBlocks(n));
+        const valid = notes.filter(n => n && typeof n.id === 'string');
+        updateNotesLoader(`${valid.length} NOTE${valid.length > 1 ? 'S' : ''} TROUVÉE${valid.length > 1 ? 'S' : ''}…`);
+        await delay(MIN_LOADER_MS);
+        updateNotesLoader('IMPORT TERMINÉ');
+        hideNotesLoader();
+        onSuccess(valid);
       } catch (err) {
+        hideNotesLoader();
         onError(err.message);
       }
     };
@@ -235,20 +297,184 @@ function createNoteEl(noteData, onUpdate, onDelete, getSelection, dragOpts = {})
 
   el.innerHTML = `
     <div class="note-header">
-      <span class="note-drag-dots">· · · · · · · ·</span>
+      <span class="note-drag-dots">· · · · �� · · ·</span>
+      <button class="note-add-image" title="Ajouter une image">IMG</button>
       <button class="note-delete" title="Supprimer">✕</button>
     </div>
-    <textarea class="note-textarea" placeholder="Note…" spellcheck="false"></textarea>
+    <div class="note-body"></div>
   `;
 
-  const textarea = el.querySelector('.note-textarea');
-  textarea.value = noteData.content;
-
+  const body = el.querySelector('.note-body');
   let saveTimer = null;
-  textarea.addEventListener('input', () => {
-    noteData.content = textarea.value;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(onUpdate, 300);
+  const debouncedSave = () => { clearTimeout(saveTimer); saveTimer = setTimeout(onUpdate, 300); };
+
+  function autoResize(ta) {
+    ta.style.height = '0';
+    ta.style.height = ta.scrollHeight + 'px';
+  }
+
+  function insertImage(dataUrl, width, height, afterIdx) {
+    const maxW = noteData.w - 20;
+    let w = width, h = height;
+    if (w > maxW) { h = h * (maxW / w); w = maxW; }
+    const imgBlock = { type: 'image', dataUrl, width: Math.round(w), height: Math.round(h) };
+    const newText  = { type: 'text', value: '' };
+    noteData.blocks.splice(afterIdx + 1, 0, imgBlock, newText);
+    onUpdate();
+    renderBlocks();
+    const newTa = body.querySelector(`[data-block-idx="${afterIdx + 2}"]`);
+    if (newTa) newTa.focus();
+  }
+
+  function renderBlocks() {
+    body.innerHTML = '';
+    const singleText = noteData.blocks.length === 1 && noteData.blocks[0].type === 'text';
+
+    noteData.blocks.forEach((block, idx) => {
+      if (block.type === 'text') {
+        const ta = document.createElement('textarea');
+        ta.className = 'note-textarea';
+        ta.placeholder = idx === 0 ? 'Note…' : '';
+        ta.spellcheck = false;
+        ta.value = block.value;
+        ta.dataset.blockIdx = idx;
+
+        if (singleText) {
+          ta.style.flex = '1';
+        }
+
+        ta.addEventListener('input', () => {
+          block.value = ta.value;
+          if (!singleText) autoResize(ta);
+          debouncedSave();
+        });
+
+        // Paste image from clipboard
+        ta.addEventListener('paste', (e) => {
+          const items = e.clipboardData?.items;
+          if (!items) return;
+          for (const item of items) {
+            if (item.type.startsWith('image/')) {
+              e.preventDefault();
+              readImageFile(item.getAsFile()).then(({ dataUrl, width, height }) => {
+                insertImage(dataUrl, width, height, idx);
+              });
+              return;
+            }
+          }
+        });
+
+        body.appendChild(ta);
+        if (!singleText) requestAnimationFrame(() => autoResize(ta));
+
+      } else if (block.type === 'image') {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'note-image-block';
+        wrapper.dataset.blockIdx = idx;
+
+        // Action buttons (visible on hover)
+        const actions = document.createElement('div');
+        actions.className = 'note-image-actions';
+
+        if (idx > 0) {
+          const up = document.createElement('button');
+          up.className = 'note-image-action-btn';
+          up.textContent = '↑';
+          up.title = 'Monter';
+          up.addEventListener('click', (e) => {
+            e.stopPropagation();
+            [noteData.blocks[idx - 1], noteData.blocks[idx]] = [noteData.blocks[idx], noteData.blocks[idx - 1]];
+            onUpdate(); renderBlocks();
+          });
+          actions.appendChild(up);
+        }
+
+        if (idx < noteData.blocks.length - 1) {
+          const down = document.createElement('button');
+          down.className = 'note-image-action-btn';
+          down.textContent = '↓';
+          down.title = 'Descendre';
+          down.addEventListener('click', (e) => {
+            e.stopPropagation();
+            [noteData.blocks[idx], noteData.blocks[idx + 1]] = [noteData.blocks[idx + 1], noteData.blocks[idx]];
+            onUpdate(); renderBlocks();
+          });
+          actions.appendChild(down);
+        }
+
+        const del = document.createElement('button');
+        del.className = 'note-image-action-btn danger';
+        del.textContent = '✕';
+        del.title = 'Supprimer l\'image';
+        del.addEventListener('click', (e) => {
+          e.stopPropagation();
+          noteData.blocks.splice(idx, 1);
+          mergeAdjacentTextBlocks(noteData.blocks);
+          if (noteData.blocks.length === 0) noteData.blocks.push({ type: 'text', value: '' });
+          onUpdate(); renderBlocks();
+        });
+        actions.appendChild(del);
+        wrapper.appendChild(actions);
+
+        // Image with resize handle
+        const imgWrap = document.createElement('div');
+        imgWrap.className = 'note-image-wrap';
+
+        const img = document.createElement('img');
+        img.src = block.dataUrl;
+        img.style.width  = block.width + 'px';
+        img.style.height = block.height + 'px';
+        img.draggable = false;
+        imgWrap.appendChild(img);
+
+        const handle = document.createElement('div');
+        handle.className = 'note-image-resize-handle';
+        imgWrap.appendChild(handle);
+
+        handle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const startX = e.clientX;
+          const startW = block.width;
+          const ratio  = block.height / block.width;
+          function onMove(ev) {
+            const newW = Math.max(50, startW + (ev.clientX - startX));
+            block.width  = Math.round(newW);
+            block.height = Math.round(newW * ratio);
+            img.style.width  = block.width + 'px';
+            img.style.height = block.height + 'px';
+          }
+          function onUp() {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            onUpdate();
+          }
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        });
+
+        wrapper.appendChild(imgWrap);
+        body.appendChild(wrapper);
+      }
+    });
+  }
+
+  // Image add button (file picker)
+  el.querySelector('.note-add-image').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      readImageFile(file).then(({ dataUrl, width, height }) => {
+        // Insert before last block position (so text follows)
+        const insertIdx = noteData.blocks.length - 1;
+        insertImage(dataUrl, width, height, insertIdx);
+      });
+    });
+    input.click();
   });
 
   el.addEventListener('mousedown', () => bringToFront(el));
@@ -261,6 +487,7 @@ function createNoteEl(noteData, onUpdate, onDelete, getSelection, dragOpts = {})
     setTimeout(() => { el.remove(); onDelete(noteData.id); }, 150);
   });
 
+  renderBlocks();
   makeDraggable(el, noteData, onUpdate, getSelection, dragOpts);
   watchResize(el, noteData, onUpdate, dragOpts.onDragMove);
   return el;
@@ -985,17 +1212,15 @@ export function mountNotesView(container) {
     persist();
   });
 
-  view.querySelector('#notes-export').addEventListener('click', () => {
-    soundManager.playConfirm();
+  view.querySelector('#notes-export').addEventListener('click', async () => {
     const notes = activePage().notes;
-    exportNotes(notes);
-    showFeedback(view, `${notes.length} note(s) exportée(s)`);
+    const result = await exportNotes(notes);
+    if (result) showFeedback(view, `${notes.length} note(s) exportée(s)`);
   });
 
   view.querySelector('#notes-import').addEventListener('click', () => {
     importNotes(
       (imported) => {
-        soundManager.playLogin();
         const page       = activePage();
         const existingIds = new Set(page.notes.map(n => n.id));
         const newOnes    = imported.filter(n => !existingIds.has(n.id));
@@ -1037,11 +1262,10 @@ export function mountNotesView(container) {
 
   view.querySelector('#notes-sel-delete').addEventListener('click', deleteSelected);
 
-  view.querySelector('#notes-sel-export').addEventListener('click', () => {
-    soundManager.playConfirm();
+  view.querySelector('#notes-sel-export').addEventListener('click', async () => {
     const selected = activePage().notes.filter(n => selectedIds.has(n.id));
-    exportNotes(selected);
-    showFeedback(view, `${selected.length} note(s) exportée(s)`);
+    const result = await exportNotes(selected);
+    if (result) showFeedback(view, `${selected.length} note(s) exportée(s)`);
   });
 
   view.querySelector('#notes-sel-clear').addEventListener('click', clearSelection);
@@ -1113,7 +1337,7 @@ export function mountNotesView(container) {
           if (selectedIds.size > 0) {
             e.preventDefault();
             const page = activePage();
-            const copiedNotes = page.notes.filter(n => selectedIds.has(n.id)).map(n => ({ ...n }));
+            const copiedNotes = page.notes.filter(n => selectedIds.has(n.id)).map(n => ({ ...n, blocks: n.blocks.map(b => ({ ...b })) }));
             const copiedConns = page.connections
               .filter(c => selectedIds.has(c.fromId) && selectedIds.has(c.toId))
               .map(c => ({ ...c, waypoints: c.waypoints.map(wp => ({ ...wp })) }));
