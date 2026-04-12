@@ -9,6 +9,10 @@
     "updater:default",
     "window-state:default",
     "dialog:default",
-    "fs:default"
+    "fs:default",
+    {
+      "identifier": "fs:allow-write-text-file",
+      "allow": [{ "path": "**" }]
+    }
   ]
 }

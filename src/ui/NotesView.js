@@ -105,25 +105,37 @@ function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 async function exportNotes(notes) {
   const defaultName = `bcc-notes-${new Date().toISOString().slice(0, 10)}.bccnotes`;
 
-  // Tauri save dialog — ask where to save
-  const filePath = await save({
-    defaultPath: defaultName,
-    filters: [{ name: 'BCC Notes', extensions: ['bccnotes'] }],
-  });
+  let filePath;
+  try {
+    // Tauri save dialog — ask where to save
+    filePath = await save({
+      defaultPath: defaultName,
+      filters: [{ name: 'BCC Notes', extensions: ['bccnotes'] }],
+    });
+  } catch (err) {
+    console.error('[export] dialog error:', err);
+    return null;
+  }
   if (!filePath) return null; // user cancelled
 
   showNotesLoader('EXPORT EN COURS…');
   updateNotesLoader(`${notes.length} NOTE${notes.length > 1 ? 'S' : ''}…`);
 
-  const json = JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), notes }, null, 2);
+  try {
+    const json = JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), notes }, null, 2);
 
-  // Write file via Tauri fs + enforce minimum loader time
-  const { writeTextFile } = await import('@tauri-apps/plugin-fs');
-  await Promise.all([writeTextFile(filePath, json), delay(MIN_LOADER_MS)]);
+    // Write file via Tauri fs + enforce minimum loader time
+    const { writeTextFile } = await import('@tauri-apps/plugin-fs');
+    await Promise.all([writeTextFile(filePath, json), delay(MIN_LOADER_MS)]);
 
-  updateNotesLoader('EXPORT TERMINÉ');
-  hideNotesLoader();
-  return filePath;
+    updateNotesLoader('EXPORT TERMINÉ');
+    hideNotesLoader();
+    return filePath;
+  } catch (err) {
+    console.error('[export] write error:', err);
+    hideNotesLoader();
+    return null;
+  }
 }
 
 function importNotes(onSuccess, onError) {
