@@ -1,6 +1,6 @@
 # BCC Terminal — documentation
 
-Version : 0.1.1. Dernière modification : 13 octobre 2026.
+Version : 0.3.1. Dernière modification : 13 octobre 2026.
 
 Application desktop Tauri 2 avec interface Vite et JavaScript. Les commandes de développement et les conventions sont décrites dans `AGENTS.md` ; les commandes du terminal dans `README.md`.
 

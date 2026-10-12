@@ -1,6 +1,6 @@
 # BCC Terminal — architecture
 
-Version : 0.1.1. Dernière modification : 13 octobre 2026.
+Version : 0.3.1. Dernière modification : 13 octobre 2026.
 
 `src/main.js` initialise l'interface et le routeur. `src/core/` gère les sessions, le terminal et le système de fichiers virtuel ; `src/commands/` expose les commandes ; `src/ui/` contient les vues ; `src/styles/` les styles et palettes. `src-tauri/` héberge le backend Rust et le packaging natif.
 
