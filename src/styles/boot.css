@@ -97,7 +97,7 @@
   margin: 16px 0;
 }
 
-/* ── Logo image (optionnel, public/logo.svg|png|webp) ─────────────────────── */
+/* ── Emblème CRT (public/logo.png) ──────────────────────────────────────── */
 
 .boot-logo-wrapper {
   position: relative;
@@ -146,8 +146,8 @@
 }
 
 .boot-logo-img {
-  max-width: 280px;
-  max-height: 200px;
+  max-width: min(320px, 60vw);
+  max-height: min(320px, 45vh);
   width: auto;
   height: auto;
   object-fit: contain;
@@ -159,6 +159,13 @@
     drop-shadow(0 0 28px var(--color-glow))
     drop-shadow(0 0 60px var(--color-glow-faint));
   display: block;
+}
+
+.boot-post-logo {
+  width: 150px;
+  height: 150px;
+  flex-shrink: 0;
+  margin: 8px 0;
 }
 
 .boot-logo-hint {

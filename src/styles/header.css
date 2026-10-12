@@ -37,11 +37,21 @@
 }
 
 .header-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-size: 13px;
   letter-spacing: 0.35em;
   color: var(--color-text-bright);
   text-transform: uppercase;
   flex-shrink: 0;
+}
+
+.header-logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 3px var(--color-glow));
 }
 
 .header-logo span {

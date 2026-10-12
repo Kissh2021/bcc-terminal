@@ -2,6 +2,8 @@
 
 Terminal rétro interactif avec effets CRT, système de fichiers virtuel et gestion de sessions.
 
+Le style et l'emblème CRT sont documentés dans [DOCUMENTATION.md](DOCUMENTATION.md), la structure dans [ARCHITECTURE.md](ARCHITECTURE.md), et les versions dans [CHANGELOG.md](CHANGELOG.md).
+
 ## Commandes disponibles
 
 | Commande   | Usage                          | Description                                      |

@@ -32,7 +32,7 @@ function render(el) {
 
   el.innerHTML = `
     ${buildNavButtons(view)}
-    <span class="header-logo">BCC <span>///</span> TERMINAL${appVersion ? `<span class="header-version">v${appVersion}</span>` : ''}</span>
+    <span class="header-logo"><img class="header-logo-img" src="/logo.png" alt="Emblème BCC" draggable="false" /> TERMINAL${appVersion ? `<span class="header-version">v${appVersion}</span>` : ''}</span>
     <div class="header-sep"></div>
     ${user
       ? `<div class="header-user">

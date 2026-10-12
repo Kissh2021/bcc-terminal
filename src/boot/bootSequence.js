@@ -1,6 +1,6 @@
 import { storage } from '../utils/storage.js';
 import { delay } from '../utils/typewriter.js';
-import { BCC_ASCII, BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } from './bootFrames.js';
+import { BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } from './bootFrames.js';
 import { session } from '../core/session.js';
 import { soundManager } from '../core/soundManager.js';
 import { checkUpdate } from '../utils/updater.js';
@@ -84,7 +84,7 @@ export async function showSplashScreen() {
 }
 
 async function tryLoadLogo() {
-  for (const src of ['/logo.svg', '/logo.png', '/logo.webp']) {
+  for (const src of ['/logo.png']) {
     const found = await new Promise(resolve => {
       const img = new Image();
       img.onload  = () => resolve(src);
@@ -179,7 +179,7 @@ async function runFullBoot(container) {
 
   if (!skipped) await delay(200);
 
-  // ASCII art
+  // Emblème phosphore
   if (!skipped) {
     const sep = document.createElement('hr');
     sep.className = 'boot-separator';
@@ -187,21 +187,12 @@ async function runFullBoot(container) {
     await delay(150);
   }
 
-  for (const line of BCC_ASCII) {
-    if (skipped) {
-      // Dump all remaining ASCII instantly
-      const el = document.createElement('div');
-      el.className = 'boot-line ascii';
-      el.textContent = line;
-      container.appendChild(el);
-    } else {
-      const el = document.createElement('div');
-      el.className = 'boot-line ascii';
-      container.appendChild(el);
-      await typeText(el, line, BOOT_TIMING.asciiCharDelay, () => skipped);
-      await delay(BOOT_TIMING.asciiLineDelay);
-    }
-  }
+  const logo = document.createElement('img');
+  logo.className = 'boot-logo-img boot-post-logo';
+  logo.src = '/logo.png';
+  logo.alt = 'Emblème du Bureau de Contrôle des Chronologies';
+  logo.draggable = false;
+  container.appendChild(logo);
 
   // Title + subtitle
   if (!skipped) await delay(100);
