@@ -1,6 +1,6 @@
 [package]
 name = "bcc-terminal"
-version = "0.3.1"
+version = "0.3.2"
 description = "BCC Terminal — Desktop"
 edition = "2021"
 
