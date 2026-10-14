@@ -1,5 +1,11 @@
 # Historique des modifications
 
+## 0.3.3 — 14 octobre 2026
+
+- Restauration du logo BCC ASCII historique et de son animation dans la séquence BIOS.
+- Suppression du style devenu inutilisé pour l’emblème BIOS.
+- Validation visuelle utilisateur après essai Tauri ; compilations Vite et Rust réussies.
+
 ## 0.3.2 — 13 octobre 2026
 
 - Création d'une variante simplifiée du logo : sablier et cercle vert phosphore.

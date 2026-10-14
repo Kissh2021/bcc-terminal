@@ -1,7 +1,18 @@
+export const BCC_ASCII = [
+  '  ██████╗  ██████╗ ██████╗ ',
+  '  ██╔══██╗██╔════╝██╔════╝ ',
+  '  ██████╔╝██║     ██║      ',
+  '  ██╔══██╗██║     ██║      ',
+  '  ██████╔╝╚██████╗╚██████╗ ',
+  '  ╚═════╝  ╚═════╝ ╚═════╝ ',
+];
+
 export const BOOT_TIMING = {
   blankHold:       350,
   postCharDelay:   14,
   postLineDelay:   20,
+  asciiCharDelay:  6,
+  asciiLineDelay:  10,
   titleCharDelay:  30,
   subtitleDelay:   20,
   readyCharDelay:  12,

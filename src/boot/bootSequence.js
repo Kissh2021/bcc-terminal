@@ -1,6 +1,6 @@
 import { storage } from '../utils/storage.js';
 import { delay } from '../utils/typewriter.js';
-import { BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } from './bootFrames.js';
+import { BCC_ASCII, BOOT_TIMING, POST_LINES, READY_LINES, QUICK_BOOT_LINES } from './bootFrames.js';
 import { session } from '../core/session.js';
 import { soundManager } from '../core/soundManager.js';
 import { checkUpdate } from '../utils/updater.js';
@@ -179,7 +179,7 @@ async function runFullBoot(container) {
 
   if (!skipped) await delay(200);
 
-  // Emblème phosphore
+  // Logo BCC ASCII historique
   if (!skipped) {
     const sep = document.createElement('hr');
     sep.className = 'boot-separator';
@@ -187,12 +187,13 @@ async function runFullBoot(container) {
     await delay(150);
   }
 
-  const logo = document.createElement('img');
-  logo.className = 'boot-logo-img boot-post-logo';
-  logo.src = '/logo.png';
-  logo.alt = 'Emblème du Bureau de Contrôle des Chronologies';
-  logo.draggable = false;
-  container.appendChild(logo);
+  for (const line of BCC_ASCII) {
+    const el = document.createElement('div');
+    el.className = 'boot-line ascii';
+    container.appendChild(el);
+    await typeText(el, line, skipped ? 0 : BOOT_TIMING.asciiCharDelay, () => skipped);
+    if (!skipped) await delay(BOOT_TIMING.asciiLineDelay);
+  }
 
   // Title + subtitle
   if (!skipped) await delay(100);
